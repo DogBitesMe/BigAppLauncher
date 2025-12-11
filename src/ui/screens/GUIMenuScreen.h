@@ -2,6 +2,7 @@
 
 #include <string>
 #include <functional>
+#include "../StyleUI.h"
 
 class GUIMenuScreen {
 public:
@@ -27,21 +28,13 @@ private:
         General
     };
     Tab m_currentTab = Tab::Visual;
+    int m_tabIndex = 0;
 
     // Tab content renderers
-    void RenderTabs(float width);
     void RenderVisualTab(float width, float height);
     void RenderItemsTab(float width, float height);
     void RenderRadarTab(float width, float height);
     void RenderGeneralTab(float width, float height);
-
-    // UI Component demos
-    void DemoGroupBox(const char* label, float width);
-    void DemoSliders();
-    void DemoCheckboxes();
-    void DemoRadioButtons();
-    void DemoColorPicker();
-    void DemoButtons();
 
     // Sample state for demos
     bool m_checkboxValue1 = true;
@@ -64,22 +57,32 @@ private:
     bool m_itemEsp = true;
     bool m_weaponEsp = true;
     bool m_vehicleEsp = false;
+    int m_itemFilterIndex = 0;
 
     // Radar settings
     bool m_radarEnabled = true;
     float m_radarSize = 200.0f;
     float m_radarZoom = 1.0f;
+    int m_radarStyleIndex = 0;
 
     // General settings
     bool m_autoAim = false;
     float m_aimFov = 10.0f;
     float m_aimSmooth = 5.0f;
 
+    // Hotkey bindings
+    StyleUI::HotkeyBinding m_toggleMenuKey = { 0x2D, false, false, false }; // INSERT
+    StyleUI::HotkeyBinding m_toggleEspKey = { 0x70, false, false, false };  // F1
+    StyleUI::HotkeyBinding m_toggleAimKey = { 0x71, false, false, false };  // F2
+
+    // Theme selection
+    int m_themeIndex = 0;
+
     // Window controls
     WindowControlCallback m_windowControlCallback;
 
     // Layout constants
     static constexpr float HEADER_HEIGHT = 45.0f;
-    static constexpr float TAB_HEIGHT = 40.0f;
+    static constexpr float TAB_HEIGHT = 60.0f;
     static constexpr float PADDING = 15.0f;
 };

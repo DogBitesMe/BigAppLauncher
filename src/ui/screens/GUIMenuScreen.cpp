@@ -1,16 +1,18 @@
 #include "GUIMenuScreen.h"
 #include "../Theme.h"
-#include "../Widgets.h"
+#include "../StyleUI.h"
 #include "../IconsFontAwesome6.h"
 #include "../../i18n/Localization.h"
 #include <imgui.h>
 
 GUIMenuScreen::GUIMenuScreen() {
+    // Initialize with default theme
+    StyleUI::SetColorScheme(StyleUI::GetDarkBlueScheme());
 }
 
 void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
-    float width = 450.0f;
-    float height = 550.0f;
+    float width = 480.0f;
+    float height = 600.0f;
 
     // Center the menu
     float x = (windowWidth - width) * 0.5f;
@@ -24,7 +26,8 @@ void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoCollapse;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.08f, 0.12f, 0.95f));
+    const auto& colors = StyleUI::GetColorScheme();
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, colors.Background);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
@@ -43,7 +46,7 @@ void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
         );
 
         // Title
-        const char* title = "Settings Menu";
+        const char* title = ICON_FA_GEAR "  Settings Menu";
         ImVec2 titleSize = ImGui::CalcTextSize(title);
         drawList->AddText(
             ImVec2(windowPos.x + 15, windowPos.y + (HEADER_HEIGHT - titleSize.y) * 0.5f),
@@ -74,34 +77,44 @@ void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
             m_windowControlCallback(1);
         }
 
-        // Tabs
-        ImGui::SetCursorPos(ImVec2(0, HEADER_HEIGHT));
-        RenderTabs(windowSize.x);
+        // Tab bar using StyleUI
+        ImGui::SetCursorPos(ImVec2(PADDING, HEADER_HEIGHT + 8));
+        ImGui::PushItemWidth(windowSize.x - PADDING * 2);
 
-        // Content
-        float contentY = HEADER_HEIGHT + TAB_HEIGHT;
-        float contentHeight = windowSize.y - contentY;
+        const char* tabIcons[] = { ICON_FA_EYE, ICON_FA_BOX, ICON_FA_SATELLITE_DISH, ICON_FA_GEAR };
+        const char* tabLabels[] = { "Visual", "Items", "Radar", "General" };
 
-        ImGui::SetCursorPos(ImVec2(PADDING, contentY + PADDING));
+        m_tabIndex = StyleUI::TabBarLarge("##MainTabs", tabIcons, tabLabels, 4, m_tabIndex);
+        m_currentTab = static_cast<Tab>(m_tabIndex);
 
-        ImGui::BeginChild("##Content", ImVec2(windowSize.x - PADDING * 2, contentHeight - PADDING * 2), false);
+        ImGui::PopItemWidth();
+
+        // Content area
+        float contentY = HEADER_HEIGHT + TAB_HEIGHT + 16;
+        float contentHeight = windowSize.y - contentY - PADDING;
+
+        ImGui::SetCursorPos(ImVec2(PADDING, contentY));
+
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImGui::BeginChild("##Content", ImVec2(windowSize.x - PADDING * 2, contentHeight), false);
 
         switch (m_currentTab) {
             case Tab::Visual:
-                RenderVisualTab(windowSize.x - PADDING * 2, contentHeight - PADDING * 2);
+                RenderVisualTab(windowSize.x - PADDING * 2, contentHeight);
                 break;
             case Tab::Items:
-                RenderItemsTab(windowSize.x - PADDING * 2, contentHeight - PADDING * 2);
+                RenderItemsTab(windowSize.x - PADDING * 2, contentHeight);
                 break;
             case Tab::Radar:
-                RenderRadarTab(windowSize.x - PADDING * 2, contentHeight - PADDING * 2);
+                RenderRadarTab(windowSize.x - PADDING * 2, contentHeight);
                 break;
             case Tab::General:
-                RenderGeneralTab(windowSize.x - PADDING * 2, contentHeight - PADDING * 2);
+                RenderGeneralTab(windowSize.x - PADDING * 2, contentHeight);
                 break;
         }
 
         ImGui::EndChild();
+        ImGui::PopStyleColor();
     }
     ImGui::End();
 
@@ -111,249 +124,170 @@ void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
 
 void GUIMenuScreen::RenderOverlay(int windowWidth, int windowHeight) {
     // For HUD overlay mode - render transparent elements
-    // This will be implemented in HUDOverlay class
-}
-
-void GUIMenuScreen::RenderTabs(float width) {
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImVec2 windowPos = ImGui::GetWindowPos();
-    float tabY = windowPos.y + HEADER_HEIGHT;
-
-    // Tab background
-    drawList->AddRectFilled(
-        ImVec2(windowPos.x, tabY),
-        ImVec2(windowPos.x + width, tabY + TAB_HEIGHT),
-        IM_COL32(20, 20, 28, 255)
-    );
-
-    struct TabInfo {
-        const char* icon;
-        const char* label;
-        Tab tab;
-    };
-
-    TabInfo tabs[] = {
-        { ICON_FA_EYE, "Visual", Tab::Visual },
-        { ICON_FA_BOX, "Items", Tab::Items },
-        { ICON_FA_SATELLITE_DISH, "Radar", Tab::Radar },
-        { ICON_FA_GEAR, "General", Tab::General },
-    };
-
-    float tabWidth = width / 4.0f;
-
-    for (int i = 0; i < 4; i++) {
-        ImVec2 tabPos(windowPos.x + i * tabWidth, tabY);
-        bool isActive = (m_currentTab == tabs[i].tab);
-        bool isHovered = ImGui::IsMouseHoveringRect(tabPos, ImVec2(tabPos.x + tabWidth, tabPos.y + TAB_HEIGHT));
-
-        // Tab background
-        if (isActive) {
-            drawList->AddRectFilled(
-                tabPos,
-                ImVec2(tabPos.x + tabWidth, tabPos.y + TAB_HEIGHT),
-                IM_COL32(66, 150, 255, 40)
-            );
-
-            // Active indicator
-            drawList->AddRectFilled(
-                ImVec2(tabPos.x, tabPos.y + TAB_HEIGHT - 3),
-                ImVec2(tabPos.x + tabWidth, tabPos.y + TAB_HEIGHT),
-                IM_COL32(66, 150, 255, 255)
-            );
-        } else if (isHovered) {
-            drawList->AddRectFilled(
-                tabPos,
-                ImVec2(tabPos.x + tabWidth, tabPos.y + TAB_HEIGHT),
-                IM_COL32(255, 255, 255, 15)
-            );
-        }
-
-        // Icon and label
-        char tabText[64];
-        snprintf(tabText, sizeof(tabText), "%s %s", tabs[i].icon, tabs[i].label);
-        ImVec2 textSize = ImGui::CalcTextSize(tabText);
-
-        ImU32 textColor = isActive ? IM_COL32(66, 150, 255, 255) : IM_COL32(180, 180, 180, 255);
-        drawList->AddText(
-            ImVec2(tabPos.x + (tabWidth - textSize.x) * 0.5f, tabPos.y + (TAB_HEIGHT - textSize.y) * 0.5f),
-            textColor,
-            tabText
-        );
-
-        // Handle click
-        if (isHovered && ImGui::IsMouseClicked(0)) {
-            m_currentTab = tabs[i].tab;
-        }
-    }
-}
-
-void GUIMenuScreen::DemoGroupBox(const char* label, float width) {
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.1f, 0.1f, 0.14f, 0.6f));
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
-
-    ImGui::BeginChild(label, ImVec2(width, 0), ImGuiChildFlags_AutoResizeY);
-
-    // Header
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
-    ImGui::Text("%s", label);
-    ImGui::PopStyleColor();
-    ImGui::Separator();
-    ImGui::Spacing();
 }
 
 void GUIMenuScreen::RenderVisualTab(float width, float height) {
-    // ESP Section
-    DemoGroupBox("ESP Settings", width - 10);
+    // ESP Settings GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_EYE, "ESP Settings")) {
+        StyleUI::ToggleSwitch("Enable ESP", &m_espEnabled);
 
-    ImGui::Checkbox("Enable ESP", &m_espEnabled);
+        if (m_espEnabled) {
+            ImGui::Spacing();
+            StyleUI::Checkbox("Box ESP", &m_boxEsp);
+            StyleUI::Checkbox("Name ESP", &m_nameEsp);
+            StyleUI::Checkbox("Health Bar", &m_healthBar);
+            StyleUI::Checkbox("Distance", &m_distanceEsp);
 
-    if (m_espEnabled) {
-        ImGui::Indent(15);
-        ImGui::Checkbox("Box ESP", &m_boxEsp);
-        ImGui::Checkbox("Name ESP", &m_nameEsp);
-        ImGui::Checkbox("Health Bar", &m_healthBar);
-        ImGui::Checkbox("Distance", &m_distanceEsp);
-        ImGui::Unindent(15);
+            ImGui::Spacing();
+            StyleUI::SliderFloat("ESP Distance", &m_espDistance, 100.0f, 1000.0f, "%.0f m");
+        }
 
-        ImGui::Spacing();
-        ImGui::Text("ESP Distance:");
-        ImGui::SliderFloat("##ESPDist", &m_espDistance, 100.0f, 1000.0f, "%.0f m");
+        StyleUI::EndGroupBox();
     }
 
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
+    // Color Settings GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_PALETTE, "Color Settings")) {
+        StyleUI::ColorEdit4("ESP Color", m_color);
 
-    ImGui::Spacing();
+        ImGui::Spacing();
 
-    // Color Settings
-    DemoGroupBox("Color Settings", width - 10);
+        // Gradient slider demo
+        StyleUI::SliderFloatGradient("Opacity", &m_color[3], 0.0f, 1.0f,
+            ImVec4(0.2f, 0.2f, 0.25f, 1.0f),
+            ImVec4(0.26f, 0.59f, 0.98f, 1.0f),
+            "%.0f%%");
 
-    ImGui::Text("ESP Color:");
-    ImGui::ColorEdit4("##ESPColor", m_color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar);
-
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
+        StyleUI::EndGroupBox();
+    }
 }
 
 void GUIMenuScreen::RenderItemsTab(float width, float height) {
-    DemoGroupBox("Item ESP", width - 10);
+    // Item ESP GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_BOX_OPEN, "Item ESP")) {
+        StyleUI::ToggleSwitch("Enable Item ESP", &m_itemEsp);
 
-    ImGui::Checkbox("Enable Item ESP", &m_itemEsp);
-    ImGui::Checkbox("Weapon ESP", &m_weaponEsp);
-    ImGui::Checkbox("Vehicle ESP", &m_vehicleEsp);
+        if (m_itemEsp) {
+            ImGui::Spacing();
+            StyleUI::Checkbox("Weapon ESP", &m_weaponEsp);
+            StyleUI::Checkbox("Vehicle ESP", &m_vehicleEsp);
 
-    ImGui::Spacing();
-    ImGui::Separator();
-    ImGui::Spacing();
+            ImGui::Spacing();
 
-    // Demo various UI components
-    ImGui::Text("UI Component Demo:");
-    ImGui::Spacing();
+            const char* filterItems[] = { "All Items", "Weapons Only", "Ammo Only", "Medical" };
+            StyleUI::Combo("Item Filter", &m_itemFilterIndex, filterItems, 4);
+        }
 
-    // Buttons
-    if (ImGui::Button("Standard Button", ImVec2(150, 30))) {
-        // Action
+        StyleUI::EndGroupBox();
     }
 
-    ImGui::SameLine();
+    // Button Demos GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_HAND_POINTER, "Button Styles")) {
+        if (StyleUI::Button("Standard Button", ImVec2(width - 30, 0))) {
+            // Action
+        }
 
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
-    if (ImGui::Button("Green Button", ImVec2(150, 30))) {
-        // Action
+        ImGui::Spacing();
+
+        if (StyleUI::ButtonGradient("Gradient Button", ImVec2(width - 30, 0))) {
+            // Action
+        }
+
+        ImGui::Spacing();
+
+        if (StyleUI::ButtonOutline("Outline Button", ImVec2(width - 30, 0))) {
+            // Action
+        }
+
+        ImGui::Spacing();
+
+        if (StyleUI::ButtonIcon(ICON_FA_ROCKET, "Icon Button", ImVec2(width - 30, 0))) {
+            // Action
+        }
+
+        StyleUI::EndGroupBox();
     }
-    ImGui::PopStyleColor();
-
-    ImGui::Spacing();
-
-    // Gradient button
-    if (Widgets::GradientButton("Gradient Button", ImVec2(width - 30, 35))) {
-        // Action
-    }
-
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
 }
 
 void GUIMenuScreen::RenderRadarTab(float width, float height) {
-    DemoGroupBox("Radar Settings", width - 10);
+    // Radar Settings GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_SATELLITE_DISH, "Radar Settings")) {
+        StyleUI::ToggleSwitch("Enable Radar", &m_radarEnabled);
 
-    ImGui::Checkbox("Enable Radar", &m_radarEnabled);
+        if (m_radarEnabled) {
+            ImGui::Spacing();
+            StyleUI::SliderFloat("Radar Size", &m_radarSize, 100.0f, 400.0f, "%.0f px");
+            StyleUI::SliderFloat("Radar Zoom", &m_radarZoom, 0.5f, 3.0f, "%.1fx");
 
-    if (m_radarEnabled) {
-        ImGui::Spacing();
-        ImGui::Text("Radar Size:");
-        ImGui::SliderFloat("##RadarSize", &m_radarSize, 100.0f, 400.0f, "%.0f px");
+            ImGui::Spacing();
 
-        ImGui::Text("Radar Zoom:");
-        ImGui::SliderFloat("##RadarZoom", &m_radarZoom, 0.5f, 3.0f, "%.1fx");
+            const char* radarStyles[] = { "Square", "Circle", "Minimal" };
+            StyleUI::Combo("Radar Style", &m_radarStyleIndex, radarStyles, 3);
+        }
+
+        StyleUI::EndGroupBox();
     }
 
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
+    // Checkbox Demos
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_SQUARE_CHECK, "Checkbox Styles")) {
+        // Text left, checkbox right (our default)
+        StyleUI::Checkbox("Modern Checkbox 1", &m_checkboxValue1);
+        StyleUI::Checkbox("Modern Checkbox 2", &m_checkboxValue2);
 
-    ImGui::Spacing();
+        ImGui::Spacing();
+        StyleUI::SeparatorText("Classic Style");
 
-    // Radio button demo
-    DemoGroupBox("Radio Button Demo", width - 10);
+        // Classic checkbox left, text right
+        StyleUI::CheckboxClassic("Classic Checkbox", &m_checkboxValue3);
 
-    ImGui::RadioButton("Option 1", &m_radioValue, 0);
-    ImGui::RadioButton("Option 2", &m_radioValue, 1);
-    ImGui::RadioButton("Option 3", &m_radioValue, 2);
-
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
+        StyleUI::EndGroupBox();
+    }
 }
 
 void GUIMenuScreen::RenderGeneralTab(float width, float height) {
-    DemoGroupBox("Aim Assist", width - 10);
+    // Aim Assist GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_CROSSHAIRS, "Aim Assist")) {
+        StyleUI::ToggleSwitch("Enable Aim Assist", &m_autoAim);
 
-    ImGui::Checkbox("Enable Aim Assist", &m_autoAim);
+        if (m_autoAim) {
+            ImGui::Spacing();
+            StyleUI::SliderFloat("FOV", &m_aimFov, 1.0f, 30.0f, "%.1f");
+            StyleUI::SliderFloat("Smoothness", &m_aimSmooth, 1.0f, 20.0f, "%.1f");
+        }
 
-    if (m_autoAim) {
-        ImGui::Spacing();
-        ImGui::Text("FOV:");
-        ImGui::SliderFloat("##AimFOV", &m_aimFov, 1.0f, 30.0f, "%.1f");
-
-        ImGui::Text("Smoothness:");
-        ImGui::SliderFloat("##AimSmooth", &m_aimSmooth, 1.0f, 20.0f, "%.1f");
+        StyleUI::EndGroupBox();
     }
 
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
+    // Hotkey Bindings GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_KEYBOARD, "Hotkey Bindings")) {
+        StyleUI::HotkeyInput("Toggle Menu", &m_toggleMenuKey);
+        StyleUI::HotkeyInput("Toggle ESP", &m_toggleEspKey);
+        StyleUI::HotkeyInput("Toggle Aim", &m_toggleAimKey);
 
-    ImGui::Spacing();
+        StyleUI::EndGroupBox();
+    }
 
-    // Slider demo
-    DemoGroupBox("Slider Demo", width - 10);
+    // Theme Selection GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_BRUSH, "Theme")) {
+        const char* themes[] = { "Dark Blue", "Dark Purple", "Dark Green", "Dark Red" };
+        int prevTheme = m_themeIndex;
+        StyleUI::Combo("Color Scheme", &m_themeIndex, themes, 4);
 
-    ImGui::Text("Float Slider:");
-    ImGui::SliderFloat("##FloatSlider", &m_sliderFloat, 0.0f, 1.0f, "%.2f");
+        if (m_themeIndex != prevTheme) {
+            switch (m_themeIndex) {
+                case 0: StyleUI::SetColorScheme(StyleUI::GetDarkBlueScheme()); break;
+                case 1: StyleUI::SetColorScheme(StyleUI::GetDarkPurpleScheme()); break;
+                case 2: StyleUI::SetColorScheme(StyleUI::GetDarkGreenScheme()); break;
+                case 3: StyleUI::SetColorScheme(StyleUI::GetDarkRedScheme()); break;
+            }
+        }
 
-    ImGui::Text("Integer Slider:");
-    ImGui::SliderInt("##IntSlider", &m_sliderInt, 0, 100, "%d");
+        ImGui::Spacing();
 
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
+        // Demo slider values
+        StyleUI::SeparatorText("Slider Demo");
+        StyleUI::SliderFloat("Float Value", &m_sliderFloat, 0.0f, 1.0f, "%.2f");
+        StyleUI::SliderInt("Integer Value", &m_sliderInt, 0, 100, "%d");
 
-    ImGui::Spacing();
-
-    // Checkbox demo
-    DemoGroupBox("Checkbox Demo", width - 10);
-
-    ImGui::Checkbox("Checkbox 1", &m_checkboxValue1);
-    ImGui::SameLine();
-    ImGui::Checkbox("Checkbox 2", &m_checkboxValue2);
-    ImGui::SameLine();
-    ImGui::Checkbox("Checkbox 3", &m_checkboxValue3);
-
-    ImGui::EndChild();
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
+        StyleUI::EndGroupBox();
+    }
 }

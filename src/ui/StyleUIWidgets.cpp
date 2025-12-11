@@ -1,0 +1,1072 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui.h>
+#include "StyleUI.h"
+#include <imgui_internal.h>
+#include <algorithm>
+#include <cstring>
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
+namespace StyleUI {
+
+//-----------------------------------------------------------------------------
+// Helper Functions
+//-----------------------------------------------------------------------------
+
+static ImU32 ColorToU32(const ImVec4& col) {
+    return ImGui::ColorConvertFloat4ToU32(col);
+}
+
+static ImVec4 LerpColor(const ImVec4& a, const ImVec4& b, float t) {
+    return ImVec4(
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t,
+        a.w + (b.w - a.w) * t
+    );
+}
+
+static ImU32 GetGradientColor(const ImVec4& top, const ImVec4& bottom, float t) {
+    return ColorToU32(LerpColor(top, bottom, t));
+}
+
+//-----------------------------------------------------------------------------
+// GroupBox
+//-----------------------------------------------------------------------------
+
+static int g_groupBoxDepth = 0;
+static ImVec2 g_groupBoxStartPos;
+
+bool BeginGroupBox(const char* label, const ImVec2& size) {
+    return BeginGroupBoxEx(nullptr, label, size);
+}
+
+bool BeginGroupBoxEx(const char* icon, const char* label, const ImVec2& size) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    g_groupBoxStartPos = window->DC.CursorPos;
+
+    // Calculate actual size
+    ImVec2 contentSize = size;
+    if (contentSize.x <= 0) contentSize.x = ImGui::GetContentRegionAvail().x;
+    if (contentSize.y <= 0) contentSize.y = 0; // Will auto-resize
+
+    // Store for EndGroupBox
+    g_groupBoxDepth++;
+
+    ImGui::PushID(id);
+
+    // Begin child with custom styling
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, colors.GroupBoxBody);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, sizes.Rounding);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(sizes.FramePadding, sizes.FramePadding));
+
+    bool opened = ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+
+    // Draw header background
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2 windowPos = ImGui::GetWindowPos();
+    float windowWidth = ImGui::GetWindowSize().x;
+
+    // Header bar
+    drawList->AddRectFilled(
+        windowPos,
+        ImVec2(windowPos.x + windowWidth, windowPos.y + sizes.GroupBoxHeaderHeight),
+        ColorToU32(colors.GroupBoxHeader),
+        sizes.Rounding,
+        ImDrawFlags_RoundCornersTop
+    );
+
+    // Header text
+    float textY = windowPos.y + (sizes.GroupBoxHeaderHeight - ImGui::GetFontSize()) * 0.5f;
+
+    if (icon && icon[0]) {
+        // Icon + Label
+        char fullLabel[256];
+        snprintf(fullLabel, sizeof(fullLabel), "%s  %s", icon, label);
+        drawList->AddText(
+            ImVec2(windowPos.x + sizes.FramePadding, textY),
+            ColorToU32(colors.Text),
+            fullLabel
+        );
+    } else {
+        drawList->AddText(
+            ImVec2(windowPos.x + sizes.FramePadding, textY),
+            ColorToU32(colors.Text),
+            label
+        );
+    }
+
+    // Move cursor below header
+    ImGui::SetCursorPosY(sizes.GroupBoxHeaderHeight + sizes.FramePadding);
+
+    return opened;
+}
+
+void EndGroupBox() {
+    if (g_groupBoxDepth <= 0) return;
+    g_groupBoxDepth--;
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+    ImGui::PopID();
+
+    ImGui::Spacing();
+}
+
+//-----------------------------------------------------------------------------
+// Toggle Switch
+//-----------------------------------------------------------------------------
+
+bool ToggleSwitch(const char* label, bool* v) {
+    const auto& colors = GetColorScheme();
+    return ToggleSwitchEx(label, v, colors.ToggleOn, colors.ToggleOff);
+}
+
+bool ToggleSwitchEx(const char* label, bool* v, const ImVec4& onColor, const ImVec4& offColor) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float toggleW = sizes.ToggleWidth;
+    float toggleH = sizes.ToggleHeight;
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float rowHeight = std::max(toggleH, labelSize.y);
+
+    // Bounding box for entire row
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + rowHeight));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    // Interaction
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+    if (pressed) *v = !*v;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Draw label (left side)
+    float textY = pos.y + (rowHeight - labelSize.y) * 0.5f;
+    dl->AddText(
+        ImVec2(pos.x, textY),
+        ColorToU32(colors.Text),
+        label
+    );
+
+    // Animate toggle position
+    float animT = Animate(id, *v ? 1.0f : 0.0f, 15.0f);
+
+    // Toggle position (right side)
+    float toggleX = pos.x + totalW - toggleW;
+    float toggleY = pos.y + (rowHeight - toggleH) * 0.5f;
+
+    // Lerp track color
+    ImVec4 trackColor = LerpColor(offColor, onColor, animT);
+
+    // Track background
+    dl->AddRectFilled(
+        ImVec2(toggleX, toggleY),
+        ImVec2(toggleX + toggleW, toggleY + toggleH),
+        ColorToU32(trackColor),
+        toggleH * 0.5f
+    );
+
+    // Knob
+    float knobRadius = (toggleH - 4.0f) * 0.5f;
+    float knobMinX = toggleX + knobRadius + 2.0f;
+    float knobMaxX = toggleX + toggleW - knobRadius - 2.0f;
+    float knobX = knobMinX + (knobMaxX - knobMinX) * animT;
+    float knobY = toggleY + toggleH * 0.5f;
+
+    // Knob shadow
+    dl->AddCircleFilled(
+        ImVec2(knobX + 1, knobY + 1),
+        knobRadius,
+        IM_COL32(0, 0, 0, 40)
+    );
+
+    // Knob
+    dl->AddCircleFilled(
+        ImVec2(knobX, knobY),
+        knobRadius,
+        IM_COL32(255, 255, 255, 255)
+    );
+
+    return pressed;
+}
+
+//-----------------------------------------------------------------------------
+// Checkbox
+//-----------------------------------------------------------------------------
+
+bool Checkbox(const char* label, bool* v) {
+    // Text left, checkbox right
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float boxSize = sizes.CheckboxSize;
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float rowHeight = std::max(boxSize, labelSize.y);
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + rowHeight));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+    if (pressed) *v = !*v;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Label (left)
+    float textY = pos.y + (rowHeight - labelSize.y) * 0.5f;
+    dl->AddText(
+        ImVec2(pos.x, textY),
+        ColorToU32(colors.Text),
+        label
+    );
+
+    // Checkbox (right)
+    float boxX = pos.x + totalW - boxSize;
+    float boxY = pos.y + (rowHeight - boxSize) * 0.5f;
+    ImVec2 boxMin(boxX, boxY);
+    ImVec2 boxMax(boxX + boxSize, boxY + boxSize);
+
+    // Animate check
+    float animT = Animate(id, *v ? 1.0f : 0.0f, 15.0f);
+
+    // Background
+    ImVec4 bgColor = *v ? colors.Primary : (hovered ? colors.BorderHover : colors.Border);
+    bgColor = LerpColor(hovered ? colors.BorderHover : colors.Border, colors.Primary, animT);
+
+    dl->AddRectFilled(boxMin, boxMax, ColorToU32(bgColor), sizes.Rounding * 0.5f);
+
+    // Checkmark
+    if (animT > 0.01f) {
+        float pad = boxSize * 0.2f;
+        float checkX = boxX + pad;
+        float checkY = boxY + boxSize * 0.5f;
+
+        ImVec2 p1(checkX, checkY);
+        ImVec2 p2(checkX + boxSize * 0.25f, checkY + boxSize * 0.25f);
+        ImVec2 p3(checkX + boxSize - pad * 2, checkY - boxSize * 0.2f);
+
+        ImU32 checkColor = IM_COL32(255, 255, 255, (int)(255 * animT));
+        dl->AddLine(p1, p2, checkColor, 2.0f);
+        dl->AddLine(p2, p3, checkColor, 2.0f);
+    }
+
+    return pressed;
+}
+
+bool CheckboxClassic(const char* label, bool* v) {
+    // Checkbox left, text right (classic style)
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float boxSize = sizes.CheckboxSize;
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+    float totalW = boxSize + sizes.ItemSpacing + labelSize.x;
+    float rowHeight = std::max(boxSize, labelSize.y);
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + rowHeight));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+    if (pressed) *v = !*v;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Checkbox (left)
+    float boxY = pos.y + (rowHeight - boxSize) * 0.5f;
+    ImVec2 boxMin(pos.x, boxY);
+    ImVec2 boxMax(pos.x + boxSize, boxY + boxSize);
+
+    float animT = Animate(id, *v ? 1.0f : 0.0f, 15.0f);
+
+    ImVec4 bgColor = LerpColor(hovered ? colors.BorderHover : colors.Border, colors.Primary, animT);
+    dl->AddRectFilled(boxMin, boxMax, ColorToU32(bgColor), sizes.Rounding * 0.5f);
+
+    // Checkmark
+    if (animT > 0.01f) {
+        float pad = boxSize * 0.2f;
+        float checkX = pos.x + pad;
+        float checkY = boxY + boxSize * 0.5f;
+
+        ImVec2 p1(checkX, checkY);
+        ImVec2 p2(checkX + boxSize * 0.25f, checkY + boxSize * 0.25f);
+        ImVec2 p3(checkX + boxSize - pad * 2, checkY - boxSize * 0.2f);
+
+        ImU32 checkColor = IM_COL32(255, 255, 255, (int)(255 * animT));
+        dl->AddLine(p1, p2, checkColor, 2.0f);
+        dl->AddLine(p2, p3, checkColor, 2.0f);
+    }
+
+    // Label (right)
+    float textY = pos.y + (rowHeight - labelSize.y) * 0.5f;
+    dl->AddText(
+        ImVec2(pos.x + boxSize + sizes.ItemSpacing, textY),
+        ColorToU32(colors.Text),
+        label
+    );
+
+    return pressed;
+}
+
+//-----------------------------------------------------------------------------
+// Sliders
+//-----------------------------------------------------------------------------
+
+bool SliderFloat(const char* label, float* v, float min, float max, const char* format) {
+    const auto& colors = GetColorScheme();
+    return SliderFloatGradient(label, v, min, max, colors.SliderTrack, colors.SliderFill, format);
+}
+
+bool SliderInt(const char* label, int* v, int min, int max, const char* format) {
+    float fv = (float)*v;
+    bool changed = SliderFloat(label, &fv, (float)min, (float)max, format);
+    if (changed) *v = (int)fv;
+    return changed;
+}
+
+bool SliderFloatGradient(const char* label, float* v, float min, float max,
+                         const ImVec4& trackColor, const ImVec4& fillColor, const char* format) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float sliderH = sizes.SliderHeight;
+    float grabW = sizes.SliderGrabWidth;
+
+    // Layout: Label on top, slider below
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+    float totalH = labelSize.y + sizes.ItemSpacing + sliderH;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + totalH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Draw label with value
+    char valueText[64];
+    snprintf(valueText, sizeof(valueText), format, *v);
+
+    dl->AddText(
+        ImVec2(pos.x, pos.y),
+        ColorToU32(colors.Text),
+        label
+    );
+
+    ImVec2 valueSize = ImGui::CalcTextSize(valueText);
+    dl->AddText(
+        ImVec2(pos.x + totalW - valueSize.x, pos.y),
+        ColorToU32(colors.TextSecondary),
+        valueText
+    );
+
+    // Slider track position
+    float trackY = pos.y + labelSize.y + sizes.ItemSpacing;
+    float trackH = sliderH * 0.4f;
+    float trackYCenter = trackY + (sliderH - trackH) * 0.5f;
+
+    ImRect sliderBB(ImVec2(pos.x, trackY), ImVec2(pos.x + totalW, trackY + sliderH));
+
+    // Interaction
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(sliderBB, id, &hovered, &held);
+
+    if (held) {
+        float mouseX = ImGui::GetIO().MousePos.x;
+        float t = (mouseX - pos.x - grabW * 0.5f) / (totalW - grabW);
+        t = ImClamp(t, 0.0f, 1.0f);
+        *v = min + (max - min) * t;
+    }
+
+    // Normalize value
+    float t = (*v - min) / (max - min);
+    t = ImClamp(t, 0.0f, 1.0f);
+
+    // Draw track background
+    dl->AddRectFilled(
+        ImVec2(pos.x, trackYCenter),
+        ImVec2(pos.x + totalW, trackYCenter + trackH),
+        ColorToU32(trackColor),
+        trackH * 0.5f
+    );
+
+    // Draw filled portion with gradient
+    float fillWidth = (totalW - grabW) * t;
+    if (fillWidth > 0) {
+        // Create gradient effect
+        ImVec2 fillMin(pos.x, trackYCenter);
+        ImVec2 fillMax(pos.x + fillWidth + grabW * 0.5f, trackYCenter + trackH);
+
+        ImU32 gradLeft = ColorToU32(fillColor);
+        ImU32 gradRight = ColorToU32(ImVec4(
+            fillColor.x * 1.2f,
+            fillColor.y * 1.2f,
+            fillColor.z * 1.2f,
+            fillColor.w
+        ));
+
+        dl->AddRectFilledMultiColor(fillMin, fillMax, gradLeft, gradRight, gradRight, gradLeft);
+    }
+
+    // Draw grab handle
+    float grabX = pos.x + (totalW - grabW) * t;
+    float grabY = trackY + (sliderH - grabW) * 0.5f;
+
+    // Grab shadow
+    dl->AddCircleFilled(
+        ImVec2(grabX + grabW * 0.5f + 1, grabY + grabW * 0.5f + 1),
+        grabW * 0.5f,
+        IM_COL32(0, 0, 0, 40)
+    );
+
+    // Grab handle
+    ImU32 grabColor = held ? ColorToU32(colors.PrimaryActive) :
+                     (hovered ? ColorToU32(colors.PrimaryHover) : ColorToU32(colors.SliderGrab));
+    dl->AddCircleFilled(
+        ImVec2(grabX + grabW * 0.5f, grabY + grabW * 0.5f),
+        grabW * 0.5f,
+        grabColor
+    );
+
+    // Grab outline
+    dl->AddCircle(
+        ImVec2(grabX + grabW * 0.5f, grabY + grabW * 0.5f),
+        grabW * 0.5f,
+        ColorToU32(colors.Primary),
+        0,
+        1.5f
+    );
+
+    return held;
+}
+
+//-----------------------------------------------------------------------------
+// Tab Systems
+//-----------------------------------------------------------------------------
+
+int TabBarLarge(const char* id, const char** icons, const char** labels, int count, int current) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return current;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID tabId = window->GetID(id);
+    ImVec2 pos = window->DC.CursorPos;
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float tabH = sizes.TabLargeHeight;
+    float tabW = totalW / count;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + tabH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, tabId)) return current;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Background
+    dl->AddRectFilled(pos, ImVec2(pos.x + totalW, pos.y + tabH), ColorToU32(colors.BackgroundAlt), sizes.Rounding);
+
+    int result = current;
+
+    for (int i = 0; i < count; i++) {
+        ImVec2 tabPos(pos.x + i * tabW, pos.y);
+        ImRect tabBB(tabPos, ImVec2(tabPos.x + tabW, tabPos.y + tabH));
+
+        ImGuiID itemId = tabId + i + 1;
+        bool isActive = (i == current);
+        bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
+
+        // Tab background
+        if (isActive) {
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, ColorToU32(ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.15f)), sizes.Rounding);
+        } else if (hovered) {
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 10), sizes.Rounding);
+        }
+
+        // Active indicator
+        if (isActive) {
+            dl->AddRectFilled(
+                ImVec2(tabBB.Min.x + 4, tabBB.Max.y - 3),
+                ImVec2(tabBB.Max.x - 4, tabBB.Max.y),
+                ColorToU32(colors.Primary),
+                1.5f
+            );
+        }
+
+        // Icon
+        if (icons && icons[i]) {
+            ImVec2 iconSize = ImGui::CalcTextSize(icons[i]);
+            float iconX = tabPos.x + (tabW - iconSize.x) * 0.5f;
+            float iconY = tabPos.y + 10;
+
+            ImU32 iconColor = isActive ? ColorToU32(colors.Primary) : ColorToU32(colors.TextSecondary);
+            dl->AddText(ImVec2(iconX, iconY), iconColor, icons[i]);
+        }
+
+        // Label
+        if (labels && labels[i]) {
+            ImVec2 labelSize = ImGui::CalcTextSize(labels[i]);
+            float labelX = tabPos.x + (tabW - labelSize.x) * 0.5f;
+            float labelY = tabPos.y + tabH - labelSize.y - 8;
+
+            ImU32 textColor = isActive ? ColorToU32(colors.Text) : ColorToU32(colors.TextSecondary);
+            dl->AddText(ImVec2(labelX, labelY), textColor, labels[i]);
+        }
+
+        // Handle click
+        if (hovered && ImGui::IsMouseClicked(0)) {
+            result = i;
+        }
+    }
+
+    return result;
+}
+
+int TabBarSmall(const char* id, const char** labels, int count, int current) {
+    return TabBarSmallIcon(id, nullptr, labels, count, current);
+}
+
+int TabBarSmallIcon(const char* id, const char** icons, const char** labels, int count, int current) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return current;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID tabId = window->GetID(id);
+    ImVec2 pos = window->DC.CursorPos;
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float tabH = sizes.TabSmallHeight;
+    float tabW = totalW / count;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + tabH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, tabId)) return current;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Background
+    dl->AddRectFilled(pos, ImVec2(pos.x + totalW, pos.y + tabH), ColorToU32(colors.BackgroundAlt), sizes.Rounding);
+
+    int result = current;
+
+    for (int i = 0; i < count; i++) {
+        ImVec2 tabPos(pos.x + i * tabW, pos.y);
+        ImRect tabBB(tabPos, ImVec2(tabPos.x + tabW, tabPos.y + tabH));
+
+        bool isActive = (i == current);
+        bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
+
+        // Tab background
+        if (isActive) {
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, ColorToU32(ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.15f)), sizes.Rounding);
+        } else if (hovered) {
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 10), sizes.Rounding);
+        }
+
+        // Underline indicator
+        if (isActive) {
+            dl->AddRectFilled(
+                ImVec2(tabBB.Min.x + 2, tabBB.Max.y - 2),
+                ImVec2(tabBB.Max.x - 2, tabBB.Max.y),
+                ColorToU32(colors.Primary)
+            );
+        }
+
+        // Build label text
+        char fullText[128];
+        if (icons && icons[i] && labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s %s", icons[i], labels[i]);
+        } else if (labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s", labels[i]);
+        } else {
+            fullText[0] = '\0';
+        }
+
+        ImVec2 textSize = ImGui::CalcTextSize(fullText);
+        float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
+        float textY = tabPos.y + (tabH - textSize.y) * 0.5f;
+
+        ImU32 textColor = isActive ? ColorToU32(colors.Primary) : ColorToU32(colors.TextSecondary);
+        dl->AddText(ImVec2(textX, textY), textColor, fullText);
+
+        if (hovered && ImGui::IsMouseClicked(0)) {
+            result = i;
+        }
+    }
+
+    return result;
+}
+
+//-----------------------------------------------------------------------------
+// Hotkey Input
+//-----------------------------------------------------------------------------
+
+static ImGuiID g_activeHotkeyId = 0;
+
+bool HotkeyInput(const char* label, HotkeyBinding* binding) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float buttonW = 140.0f;
+    float clearW = 24.0f;
+    float rowH = sizes.ButtonHeight;
+
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + rowH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    ImDrawList* dl = window->DrawList;
+    bool changed = false;
+    bool isBinding = (g_activeHotkeyId == id);
+
+    // Label (left)
+    float textY = pos.y + (rowH - labelSize.y) * 0.5f;
+    dl->AddText(ImVec2(pos.x, textY), ColorToU32(colors.Text), label);
+
+    // Button area (right)
+    float buttonX = pos.x + totalW - buttonW - clearW - sizes.ItemSpacing;
+    ImRect buttonBB(ImVec2(buttonX, pos.y), ImVec2(buttonX + buttonW, pos.y + rowH));
+
+    bool buttonHovered = ImGui::IsMouseHoveringRect(buttonBB.Min, buttonBB.Max);
+
+    // Button background
+    ImVec4 bgColor = isBinding ? colors.PrimaryActive :
+                    (buttonHovered ? colors.BorderHover : colors.Border);
+    dl->AddRectFilled(buttonBB.Min, buttonBB.Max, ColorToU32(bgColor), sizes.Rounding);
+
+    // Button text
+    const char* displayText = isBinding ? "Press key..." : GetHotkeyDisplayString(*binding);
+    ImVec2 textSize = ImGui::CalcTextSize(displayText);
+    float btnTextX = buttonX + (buttonW - textSize.x) * 0.5f;
+    float btnTextY = pos.y + (rowH - textSize.y) * 0.5f;
+    dl->AddText(ImVec2(btnTextX, btnTextY), ColorToU32(isBinding ? colors.Text : colors.TextSecondary), displayText);
+
+    // Handle button click to start binding
+    if (buttonHovered && ImGui::IsMouseClicked(0) && !isBinding) {
+        g_activeHotkeyId = id;
+    }
+
+    // Handle key input when binding
+    if (isBinding) {
+#ifdef _WIN32
+        // Check for key press
+        for (int vk = 0x08; vk <= 0xFE; vk++) {
+            // Skip modifier keys
+            if (vk == VK_CONTROL || vk == VK_SHIFT || vk == VK_MENU ||
+                vk == VK_LCONTROL || vk == VK_RCONTROL ||
+                vk == VK_LSHIFT || vk == VK_RSHIFT ||
+                vk == VK_LMENU || vk == VK_RMENU) {
+                continue;
+            }
+
+            if (GetAsyncKeyState(vk) & 0x8000) {
+                // Check if this is escape to cancel
+                if (vk == VK_ESCAPE) {
+                    g_activeHotkeyId = 0;
+                    break;
+                }
+
+                binding->key = vk;
+                binding->ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+                binding->alt = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+                binding->shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+                g_activeHotkeyId = 0;
+                changed = true;
+                break;
+            }
+        }
+#endif
+    }
+
+    // Clear button
+    float clearX = buttonX + buttonW + sizes.ItemSpacing;
+    ImRect clearBB(ImVec2(clearX, pos.y + (rowH - clearW) * 0.5f),
+                   ImVec2(clearX + clearW, pos.y + (rowH + clearW) * 0.5f));
+
+    bool clearHovered = ImGui::IsMouseHoveringRect(clearBB.Min, clearBB.Max);
+
+    dl->AddRectFilled(clearBB.Min, clearBB.Max,
+                     clearHovered ? ColorToU32(colors.Error) : IM_COL32(80, 80, 90, 255),
+                     sizes.Rounding * 0.5f);
+
+    // X icon for clear
+    float xPad = 6.0f;
+    ImU32 xColor = IM_COL32(255, 255, 255, 200);
+    dl->AddLine(ImVec2(clearBB.Min.x + xPad, clearBB.Min.y + xPad),
+               ImVec2(clearBB.Max.x - xPad, clearBB.Max.y - xPad), xColor, 1.5f);
+    dl->AddLine(ImVec2(clearBB.Max.x - xPad, clearBB.Min.y + xPad),
+               ImVec2(clearBB.Min.x + xPad, clearBB.Max.y - xPad), xColor, 1.5f);
+
+    if (clearHovered && ImGui::IsMouseClicked(0)) {
+        binding->Clear();
+        g_activeHotkeyId = 0;
+        changed = true;
+    }
+
+    return changed;
+}
+
+//-----------------------------------------------------------------------------
+// Buttons
+//-----------------------------------------------------------------------------
+
+bool Button(const char* label, const ImVec2& size) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    ImVec2 btnSize = size;
+    if (btnSize.x <= 0) btnSize.x = ImGui::CalcTextSize(label).x + sizes.FramePadding * 2;
+    if (btnSize.y <= 0) btnSize.y = sizes.ButtonHeight;
+
+    ImRect bb(pos, ImVec2(pos.x + btnSize.x, pos.y + btnSize.y));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+
+    ImDrawList* dl = window->DrawList;
+
+    // Background
+    ImVec4 bgColor = held ? colors.PrimaryActive : (hovered ? colors.BorderHover : colors.Border);
+    dl->AddRectFilled(bb.Min, bb.Max, ColorToU32(bgColor), sizes.Rounding);
+
+    // Text
+    ImVec2 textSize = ImGui::CalcTextSize(label);
+    float textX = pos.x + (btnSize.x - textSize.x) * 0.5f;
+    float textY = pos.y + (btnSize.y - textSize.y) * 0.5f;
+    dl->AddText(ImVec2(textX, textY), ColorToU32(colors.Text), label);
+
+    return pressed;
+}
+
+bool ButtonGradient(const char* label, const ImVec2& size) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    ImVec2 btnSize = size;
+    if (btnSize.x <= 0) btnSize.x = ImGui::CalcTextSize(label).x + sizes.FramePadding * 2;
+    if (btnSize.y <= 0) btnSize.y = sizes.ButtonHeight;
+
+    ImRect bb(pos, ImVec2(pos.x + btnSize.x, pos.y + btnSize.y));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+
+    ImDrawList* dl = window->DrawList;
+
+    // Gradient background
+    ImVec4 topColor = held ? colors.PrimaryActive : (hovered ? colors.PrimaryHover : colors.Primary);
+    ImVec4 bottomColor = ImVec4(topColor.x * 0.7f, topColor.y * 0.7f, topColor.z * 0.7f, topColor.w);
+
+    dl->AddRectFilledMultiColor(
+        bb.Min, bb.Max,
+        ColorToU32(topColor), ColorToU32(topColor),
+        ColorToU32(bottomColor), ColorToU32(bottomColor)
+    );
+
+    // Rounded corners overlay (to fake rounded gradient)
+    // Draw corner masks
+    dl->AddRectFilled(bb.Min, bb.Max, IM_COL32(0, 0, 0, 0), sizes.Rounding);
+
+    // Text
+    ImVec2 textSize = ImGui::CalcTextSize(label);
+    float textX = pos.x + (btnSize.x - textSize.x) * 0.5f;
+    float textY = pos.y + (btnSize.y - textSize.y) * 0.5f;
+    dl->AddText(ImVec2(textX, textY), IM_COL32(255, 255, 255, 255), label);
+
+    return pressed;
+}
+
+bool ButtonOutline(const char* label, const ImVec2& size) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    ImVec2 btnSize = size;
+    if (btnSize.x <= 0) btnSize.x = ImGui::CalcTextSize(label).x + sizes.FramePadding * 2;
+    if (btnSize.y <= 0) btnSize.y = sizes.ButtonHeight;
+
+    ImRect bb(pos, ImVec2(pos.x + btnSize.x, pos.y + btnSize.y));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held);
+
+    ImDrawList* dl = window->DrawList;
+
+    // Background (subtle on hover)
+    if (hovered || held) {
+        dl->AddRectFilled(bb.Min, bb.Max, ColorToU32(ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.1f)), sizes.Rounding);
+    }
+
+    // Border
+    ImVec4 borderColor = held ? colors.PrimaryActive : (hovered ? colors.PrimaryHover : colors.Primary);
+    dl->AddRect(bb.Min, bb.Max, ColorToU32(borderColor), sizes.Rounding, 0, 1.5f);
+
+    // Text
+    ImVec2 textSize = ImGui::CalcTextSize(label);
+    float textX = pos.x + (btnSize.x - textSize.x) * 0.5f;
+    float textY = pos.y + (btnSize.y - textSize.y) * 0.5f;
+    dl->AddText(ImVec2(textX, textY), ColorToU32(borderColor), label);
+
+    return pressed;
+}
+
+bool ButtonIcon(const char* icon, const char* label, const ImVec2& size) {
+    char fullLabel[256];
+    if (icon && icon[0]) {
+        snprintf(fullLabel, sizeof(fullLabel), "%s  %s", icon, label);
+    } else {
+        snprintf(fullLabel, sizeof(fullLabel), "%s", label);
+    }
+    return Button(fullLabel, size);
+}
+
+//-----------------------------------------------------------------------------
+// ComboBox
+//-----------------------------------------------------------------------------
+
+bool Combo(const char* label, int* current, const char** items, int count) {
+    return ComboEx(label, current, items, count, 0);
+}
+
+bool ComboEx(const char* label, int* current, const char** items, int count, float width) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float comboW = width > 0 ? width : 150.0f;
+    float rowH = sizes.ButtonHeight;
+
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + rowH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    ImDrawList* dl = window->DrawList;
+    bool changed = false;
+
+    // Label (left)
+    float textY = pos.y + (rowH - labelSize.y) * 0.5f;
+    dl->AddText(ImVec2(pos.x, textY), ColorToU32(colors.Text), label);
+
+    // Combo button (right)
+    float comboX = pos.x + totalW - comboW;
+    ImRect comboBB(ImVec2(comboX, pos.y), ImVec2(comboX + comboW, pos.y + rowH));
+
+    bool hovered = ImGui::IsMouseHoveringRect(comboBB.Min, comboBB.Max);
+
+    // Background
+    dl->AddRectFilled(comboBB.Min, comboBB.Max, ColorToU32(hovered ? colors.BorderHover : colors.Border), sizes.Rounding);
+
+    // Current item text
+    const char* preview = (*current >= 0 && *current < count) ? items[*current] : "";
+    ImVec2 previewSize = ImGui::CalcTextSize(preview);
+    float previewX = comboX + sizes.FramePadding;
+    float previewY = pos.y + (rowH - previewSize.y) * 0.5f;
+    dl->AddText(ImVec2(previewX, previewY), ColorToU32(colors.Text), preview);
+
+    // Arrow indicator
+    float arrowX = comboX + comboW - 20;
+    float arrowY = pos.y + rowH * 0.5f;
+    dl->AddTriangleFilled(
+        ImVec2(arrowX, arrowY - 3),
+        ImVec2(arrowX + 8, arrowY - 3),
+        ImVec2(arrowX + 4, arrowY + 3),
+        ColorToU32(colors.TextSecondary)
+    );
+
+    // Handle click to open popup
+    ImGui::PushID(id);
+    if (hovered && ImGui::IsMouseClicked(0)) {
+        ImGui::OpenPopup("##ComboPopup");
+    }
+
+    // Popup
+    ImGui::SetNextWindowPos(ImVec2(comboX, pos.y + rowH));
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, colors.BackgroundAlt);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+    ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding, sizes.Rounding);
+
+    if (ImGui::BeginPopup("##ComboPopup")) {
+        for (int i = 0; i < count; i++) {
+            bool isSelected = (i == *current);
+            if (ImGui::Selectable(items[i], isSelected)) {
+                *current = i;
+                changed = true;
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndPopup();
+    }
+
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+    ImGui::PopID();
+
+    return changed;
+}
+
+//-----------------------------------------------------------------------------
+// Color Picker
+//-----------------------------------------------------------------------------
+
+bool ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags) {
+    // Wrapper around ImGui's color picker with our styling
+    ImGui::PushID(label);
+
+    const auto& colors = GetColorScheme();
+
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, colors.Border);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, colors.BorderHover);
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, colors.BackgroundAlt);
+
+    bool changed = ImGui::ColorEdit4(label, col, flags | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar);
+
+    ImGui::PopStyleColor(3);
+    ImGui::PopID();
+
+    return changed;
+}
+
+//-----------------------------------------------------------------------------
+// Separator with Text
+//-----------------------------------------------------------------------------
+
+void SeparatorText(const char* text) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImVec2 pos = window->DC.CursorPos;
+    float totalW = ImGui::GetContentRegionAvail().x;
+    ImVec2 textSize = ImGui::CalcTextSize(text);
+    float lineY = pos.y + textSize.y * 0.5f;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Left line
+    float textX = pos.x + 10;
+    dl->AddLine(ImVec2(pos.x, lineY), ImVec2(textX - 5, lineY), ColorToU32(colors.Border));
+
+    // Text
+    dl->AddText(ImVec2(textX, pos.y), ColorToU32(colors.TextSecondary), text);
+
+    // Right line
+    float rightX = textX + textSize.x + 5;
+    dl->AddLine(ImVec2(rightX, lineY), ImVec2(pos.x + totalW, lineY), ColorToU32(colors.Border));
+
+    ImGui::ItemSize(ImVec2(totalW, textSize.y + sizes.ItemSpacing));
+}
+
+//-----------------------------------------------------------------------------
+// Label with Value
+//-----------------------------------------------------------------------------
+
+void LabelValue(const char* label, const char* value) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return;
+
+    const auto& colors = GetColorScheme();
+
+    ImVec2 pos = window->DC.CursorPos;
+    float totalW = ImGui::GetContentRegionAvail().x;
+
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+    ImVec2 valueSize = ImGui::CalcTextSize(value);
+    float rowH = std::max(labelSize.y, valueSize.y);
+
+    ImDrawList* dl = window->DrawList;
+
+    // Label (left)
+    dl->AddText(pos, ColorToU32(colors.Text), label);
+
+    // Value (right)
+    dl->AddText(ImVec2(pos.x + totalW - valueSize.x, pos.y), ColorToU32(colors.TextSecondary), value);
+
+    ImGui::ItemSize(ImVec2(totalW, rowH));
+}
+
+} // namespace StyleUI

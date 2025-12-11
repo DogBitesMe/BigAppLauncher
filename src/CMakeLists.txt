@@ -18,6 +18,8 @@ set(SOURCES
     ui/Widgets.cpp
     ui/DebugController.cpp
     ui/HUDOverlay.cpp
+    ui/StyleUI.cpp
+    ui/StyleUIWidgets.cpp
     ui/screens/LoginScreen.cpp
     ui/screens/ProductsScreen.cpp
     ui/screens/GUIMenuScreen.cpp
@@ -44,6 +46,7 @@ set(HEADERS
     ui/Widgets.h
     ui/DebugController.h
     ui/HUDOverlay.h
+    ui/StyleUI.h
     ui/screens/LoginScreen.h
     ui/screens/ProductsScreen.h
     ui/screens/GUIMenuScreen.h
