@@ -46,10 +46,21 @@ void ProductsScreen::RenderSidebar(float width, float height) {
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoCollapse;
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoBackground;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.08f, 0.12f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+    // Draw rounded sidebar background with bottom-left corner rounding
+    ImDrawList* bgDrawList = ImGui::GetBackgroundDrawList();
+    const float cornerRadius = 12.0f;
+    bgDrawList->AddRectFilled(
+        ImVec2(0, 0),
+        ImVec2(width, height),
+        IM_COL32(20, 20, 30, 255),
+        cornerRadius,
+        ImDrawFlags_RoundCornersBottomLeft
+    );
 
     if (ImGui::Begin("##Sidebar", nullptr, flags)) {
         ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -139,7 +150,6 @@ void ProductsScreen::RenderSidebar(float width, float height) {
     ImGui::End();
 
     ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
 }
 
 void ProductsScreen::RenderContent(float x, float width, float height) {
@@ -151,10 +161,21 @@ void ProductsScreen::RenderContent(float x, float width, float height) {
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoCollapse;
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoBackground;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.06f, 0.06f, 0.09f, 1.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+    // Draw rounded content background with bottom-right corner rounding
+    ImDrawList* bgDrawList = ImGui::GetBackgroundDrawList();
+    const float cornerRadius = 12.0f;
+    bgDrawList->AddRectFilled(
+        ImVec2(x, 0),
+        ImVec2(x + width, height),
+        IM_COL32(15, 15, 23, 255),
+        cornerRadius,
+        ImDrawFlags_RoundCornersBottomRight
+    );
 
     if (ImGui::Begin("##Content", nullptr, flags)) {
         // Account bar at top
@@ -187,7 +208,6 @@ void ProductsScreen::RenderContent(float x, float width, float height) {
     ImGui::End();
 
     ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
 }
 
 void ProductsScreen::RenderAccountBar(float width) {

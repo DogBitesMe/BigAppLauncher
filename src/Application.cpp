@@ -489,9 +489,15 @@ void Application::Update() {
         m_hudOverlay->SetFPS(1.0f / deltaTime);
     }
 
-    // Update logic
-    if (m_loginScreen && m_loginScreen->IsLoggedIn()) {
-        m_state = AppState::Products;
+    // Update logic - state transitions
+    // Only transition from Login to Products if currently in Login state
+    if (m_state == AppState::Login && m_loginScreen && m_loginScreen->IsLoggedIn()) {
+        // Check if we should skip entry page
+        if (m_debugController && m_debugController->skipEntryPage) {
+            m_state = AppState::GUIMenu;
+        } else {
+            m_state = AppState::Products;
+        }
     }
 }
 
@@ -518,8 +524,8 @@ void Application::Render() {
         case AppState::Login:
             if (m_loginScreen) {
                 // Render blurred panel background (frosted glass effect)
-                const float panelWidth = 420.0f;
-                const float panelHeight = 480.0f;
+                const float panelWidth = 480.0f;
+                const float panelHeight = 560.0f;
                 float panelX = (m_width - panelWidth) * 0.5f;
                 float panelY = (m_height - panelHeight) * 0.5f;
                 RenderBlurredPanelBackground(panelX, panelY, panelWidth, panelHeight);

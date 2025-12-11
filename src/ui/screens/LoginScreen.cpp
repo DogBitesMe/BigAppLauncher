@@ -57,9 +57,9 @@ void LoginScreen::HandleLoginAttempt() {
 }
 
 void LoginScreen::Render(int windowWidth, int windowHeight) {
-    // Panel dimensions
-    const float panelWidth = 420.0f;
-    const float panelHeight = 480.0f;
+    // Panel dimensions (larger default size)
+    const float panelWidth = 480.0f;
+    const float panelHeight = 560.0f;
 
     // Center the panel
     float panelX = (windowWidth - panelWidth) * 0.5f;
