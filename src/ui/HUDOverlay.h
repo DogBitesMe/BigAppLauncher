@@ -54,7 +54,7 @@ private:
     ImVec2 m_floatingWindowPos = ImVec2(100, 150);
 
     // Layout constants
-    static constexpr float HEADER_HEIGHT = 26.0f;
+    static constexpr float HEADER_HEIGHT = 38.0f;
     static constexpr float FOOTER_HEIGHT = 24.0f;
     static constexpr float SIDE_WIDTH = 200.0f;
 };

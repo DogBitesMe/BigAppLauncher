@@ -7,7 +7,7 @@ void DebugController::Render(LoginScreen* loginScreen) {
     if (!showDebugWindow) return;
 
     ImGui::SetNextWindowPos(ImVec2(10, 50), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(280, 220), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(280, 480), ImGuiCond_FirstUseEver);
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse;
 

@@ -480,6 +480,8 @@ void Application::Update() {
         if (m_productsScreen->ShouldLaunchProduct()) {
             m_productsScreen->ResetLaunch();
             m_state = AppState::GUIMenu;
+            // Maximize window for overlay mode
+            ShowWindow(m_hwnd, SW_MAXIMIZE);
         }
     }
 
@@ -495,6 +497,8 @@ void Application::Update() {
         // Check if we should skip entry page
         if (m_debugController && m_debugController->skipEntryPage) {
             m_state = AppState::GUIMenu;
+            // Maximize window for overlay mode
+            ShowWindow(m_hwnd, SW_MAXIMIZE);
         } else {
             m_state = AppState::Products;
         }
@@ -507,8 +511,12 @@ void Application::Render() {
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
-    // Clear background with dark color
-    m_dx11->BeginFrame(0.06f, 0.06f, 0.09f, 1.0f);
+    // Clear background - black for GUIMenu (overlay compositing), dark gray otherwise
+    if (m_state == AppState::GUIMenu) {
+        m_dx11->BeginFrame(0.0f, 0.0f, 0.0f, 1.0f);  // Pure black for transparency
+    } else {
+        m_dx11->BeginFrame(0.06f, 0.06f, 0.09f, 1.0f);
+    }
 
     // Render video background first (only on login screen)
     if (m_state == AppState::Login) {
@@ -567,8 +575,8 @@ void Application::Render() {
             break;
     }
 
-    // Render debug controller (always on top)
-    if (m_debugController) {
+    // Render debug controller (only on Login screen)
+    if (m_state == AppState::Login && m_debugController) {
         m_debugController->Render(m_loginScreen.get());
     }
 

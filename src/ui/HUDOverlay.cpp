@@ -40,10 +40,13 @@ void HUDOverlay::Render(int windowWidth, int windowHeight) {
 
 void HUDOverlay::RenderHeaderBar(int windowWidth) {
     // Small opaque header bar for FPS and status
-    // Designed for overlay - minimal size, dark background
+    // Centered, fixed width, with bottom corner rounding
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2((float)windowWidth, HEADER_HEIGHT));
+    const float HEADER_BAR_WIDTH = 400.0f;
+    float headerX = (windowWidth - HEADER_BAR_WIDTH) * 0.5f;
+
+    ImGui::SetNextWindowPos(ImVec2(headerX, 0));
+    ImGui::SetNextWindowSize(ImVec2(HEADER_BAR_WIDTH, HEADER_HEIGHT));
 
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_NoTitleBar |
@@ -51,17 +54,31 @@ void HUDOverlay::RenderHeaderBar(int windowWidth) {
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoInputs;
+        ImGuiWindowFlags_NoInputs |
+        ImGuiWindowFlags_NoBackground;
 
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.85f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 4));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+
+    // Draw background with bottom corner rounding
+    ImDrawList* bgDrawList = ImGui::GetBackgroundDrawList();
+    const float cornerRadius = 10.0f;
+    bgDrawList->AddRectFilled(
+        ImVec2(headerX, 0),
+        ImVec2(headerX + HEADER_BAR_WIDTH, HEADER_HEIGHT),
+        IM_COL32(0, 0, 0, 220),
+        cornerRadius,
+        ImDrawFlags_RoundCornersBottom
+    );
 
     if (ImGui::Begin("##HUDHeader", nullptr, flags)) {
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         ImVec2 windowPos = ImGui::GetWindowPos();
 
-        // FPS display
+        // Calculate vertical center for text
+        float textY = windowPos.y + (HEADER_HEIGHT - ImGui::GetFontSize()) * 0.5f;
+
+        // FPS display (left)
         char fpsText[32];
         snprintf(fpsText, sizeof(fpsText), "%s FPS: %.0f", ICON_FA_GAUGE_HIGH, m_fps);
 
@@ -69,34 +86,33 @@ void HUDOverlay::RenderHeaderBar(int windowWidth) {
                         (m_fps >= 30 ? IM_COL32(255, 255, 100, 255) : IM_COL32(255, 100, 100, 255));
 
         drawList->AddText(
-            ImVec2(windowPos.x + 10, windowPos.y + 5),
+            ImVec2(windowPos.x + 15, textY),
             fpsColor,
             fpsText
         );
 
-        // Status indicators (right side)
-        const char* status = ICON_FA_CIRCLE " Active";
-        ImVec2 statusSize = ImGui::CalcTextSize(status);
-        drawList->AddText(
-            ImVec2(windowPos.x + windowWidth - statusSize.x - 15, windowPos.y + 5),
-            IM_COL32(100, 255, 100, 255),
-            status
-        );
-
-        // Time
+        // Time (center)
         char timeText[32];
         snprintf(timeText, sizeof(timeText), "%s 12:34:56", ICON_FA_CLOCK);
         ImVec2 timeSize = ImGui::CalcTextSize(timeText);
         drawList->AddText(
-            ImVec2(windowPos.x + windowWidth * 0.5f - timeSize.x * 0.5f, windowPos.y + 5),
+            ImVec2(windowPos.x + HEADER_BAR_WIDTH * 0.5f - timeSize.x * 0.5f, textY),
             IM_COL32(200, 200, 200, 255),
             timeText
+        );
+
+        // Status indicators (right)
+        const char* status = ICON_FA_CIRCLE " Active";
+        ImVec2 statusSize = ImGui::CalcTextSize(status);
+        drawList->AddText(
+            ImVec2(windowPos.x + HEADER_BAR_WIDTH - statusSize.x - 15, textY),
+            IM_COL32(100, 255, 100, 255),
+            status
         );
     }
     ImGui::End();
 
     ImGui::PopStyleVar(2);
-    ImGui::PopStyleColor();
 }
 
 void HUDOverlay::RenderFooterBar(int windowWidth, int windowHeight) {
