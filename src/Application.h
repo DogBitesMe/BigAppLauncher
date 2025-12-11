@@ -62,4 +62,7 @@ private:
 
     // Debug info
     std::wstring m_videoStatus;
+
+    // Window controls config
+    bool m_showMaximizeButton = true;
 };

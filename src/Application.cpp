@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "ui/Theme.h"
+#include "ui/IconsFontAwesome6.h"
 #include "i18n/Localization.h"
 
 #include <imgui.h>
@@ -147,8 +148,20 @@ bool Application::InitializeImGui() {
 
     if (!font) {
         // Fallback to default font
-        io.Fonts->AddFontDefault();
+        font = io.Fonts->AddFontDefault();
     }
+
+    // Load FontAwesome icons and merge with main font
+    static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+    ImFontConfig icons_config;
+    icons_config.MergeMode = true;
+    icons_config.PixelSnapH = true;
+    io.Fonts->AddFontFromFileTTF(
+        "assets/fonts/fa-solid-900.ttf",
+        14.0f,
+        &icons_config,
+        icons_ranges
+    );
 
     // Apply custom theme
     Theme::Apply();
@@ -306,12 +319,16 @@ void Application::RenderWindowControls() {
     const float buttonSpacing = 4.0f;
     const float margin = 8.0f;
 
+    // Calculate number of buttons
+    int numButtons = m_showMaximizeButton ? 3 : 2;
+
     // Position buttons at top-right
-    float startX = m_width - margin - (buttonSize * 3 + buttonSpacing * 2);
+    float windowWidth = buttonSize * numButtons + buttonSpacing * (numButtons - 1);
+    float startX = m_width - margin - windowWidth;
     float startY = margin;
 
     ImGui::SetNextWindowPos(ImVec2(startX, startY));
-    ImGui::SetNextWindowSize(ImVec2(buttonSize * 3 + buttonSpacing * 2, buttonSize));
+    ImGui::SetNextWindowSize(ImVec2(windowWidth, buttonSize));
 
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_NoTitleBar |
@@ -324,50 +341,80 @@ void Application::RenderWindowControls() {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(buttonSpacing, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));  // Center icon in button
 
     if (ImGui::Begin("##WindowControls", nullptr, flags)) {
-        // Minimize button
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.35f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.4f, 0.45f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0.35f, 0.4f, 0.9f));
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 windowPos = ImGui::GetWindowPos();
+        float rounding = 6.0f;
 
-        if (ImGui::Button("_", ImVec2(buttonSize, buttonSize))) {
+        // Helper lambda for centered icon button
+        auto IconButton = [&](const char* id, const char* icon, ImVec4 normalColor, ImVec4 hoverColor, ImVec4 activeColor, float xOffset) -> bool {
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            ImGui::InvisibleButton(id, ImVec2(buttonSize, buttonSize));
+            bool clicked = ImGui::IsItemClicked();
+            bool hovered = ImGui::IsItemHovered();
+            bool active = ImGui::IsItemActive();
+
+            // Choose color based on state
+            ImVec4 color = active ? activeColor : (hovered ? hoverColor : normalColor);
+            ImU32 bgColor = ImGui::ColorConvertFloat4ToU32(color);
+
+            // Draw button background
+            drawList->AddRectFilled(pos, ImVec2(pos.x + buttonSize, pos.y + buttonSize), bgColor, rounding);
+
+            // Calculate centered text position
+            ImVec2 textSize = ImGui::CalcTextSize(icon);
+            float textX = pos.x + (buttonSize - textSize.x) * 0.5f + xOffset;
+            float textY = pos.y + (buttonSize - textSize.y) * 0.5f;
+
+            // Draw icon
+            drawList->AddText(ImVec2(textX, textY), IM_COL32(255, 255, 255, 255), icon);
+
+            return clicked;
+        };
+
+        // Minimize button
+        if (IconButton("##min", ICON_FA_WINDOW_MINIMIZE,
+            ImVec4(0.3f, 0.3f, 0.35f, 0.6f),
+            ImVec4(0.4f, 0.4f, 0.45f, 0.8f),
+            ImVec4(0.35f, 0.35f, 0.4f, 0.9f), 0.0f)) {
             ShowWindow(m_hwnd, SW_MINIMIZE);
         }
 
-        ImGui::SameLine();
+        // Maximize/Restore button (optional)
+        if (m_showMaximizeButton) {
+            ImGui::SameLine();
 
-        // Maximize/Restore button
-        WINDOWPLACEMENT wp = { sizeof(wp) };
-        GetWindowPlacement(m_hwnd, &wp);
-        const char* maxLabel = (wp.showCmd == SW_MAXIMIZE) ? "[]" : "[ ]";
+            WINDOWPLACEMENT wp = { sizeof(wp) };
+            GetWindowPlacement(m_hwnd, &wp);
+            const char* maxIcon = (wp.showCmd == SW_MAXIMIZE) ? ICON_FA_WINDOW_RESTORE : ICON_FA_WINDOW_MAXIMIZE;
 
-        if (ImGui::Button(maxLabel, ImVec2(buttonSize, buttonSize))) {
-            if (wp.showCmd == SW_MAXIMIZE) {
-                ShowWindow(m_hwnd, SW_RESTORE);
-            } else {
-                ShowWindow(m_hwnd, SW_MAXIMIZE);
+            if (IconButton("##max", maxIcon,
+                ImVec4(0.3f, 0.3f, 0.35f, 0.6f),
+                ImVec4(0.4f, 0.4f, 0.45f, 0.8f),
+                ImVec4(0.35f, 0.35f, 0.4f, 0.9f), 0.0f)) {
+                if (wp.showCmd == SW_MAXIMIZE) {
+                    ShowWindow(m_hwnd, SW_RESTORE);
+                } else {
+                    ShowWindow(m_hwnd, SW_MAXIMIZE);
+                }
             }
         }
-
-        ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
 
         // Close button (red)
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.6f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 0.9f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.15f, 0.15f, 1.0f));
-
-        if (ImGui::Button("X", ImVec2(buttonSize, buttonSize))) {
+        if (IconButton("##close", ICON_FA_XMARK,
+            ImVec4(0.8f, 0.2f, 0.2f, 0.6f),
+            ImVec4(0.9f, 0.3f, 0.3f, 0.9f),
+            ImVec4(0.7f, 0.15f, 0.15f, 1.0f), 0.0f)) {
             m_running = false;
         }
-
-        ImGui::PopStyleColor(3);
     }
     ImGui::End();
 
-    ImGui::PopStyleVar(3);
+    ImGui::PopStyleVar(4);
 }
 
 void Application::ShutdownImGui() {
