@@ -23,7 +23,13 @@
         "error_empty_username": "Please enter username",
         "error_empty_password": "Please enter password",
         "error_password_mismatch": "Passwords do not match",
-        "error_invalid_email": "Invalid email format"
+        "error_invalid_email": "Invalid email format",
+        "error_connection": "Connection error, please check network",
+        "error_credentials": "Invalid username or password",
+        "error_expired": "Account has expired",
+        "success": "Login successful",
+        "register_success": "Registration successful",
+        "password_changed": "Password changed successfully"
     },
     "product": {
         "title": "Products",

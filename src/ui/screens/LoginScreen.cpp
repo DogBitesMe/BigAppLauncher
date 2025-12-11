@@ -4,6 +4,58 @@
 #include "../../i18n/Localization.h"
 #include <imgui.h>
 
+void LoginScreen::SetLoginMode(int mode) {
+    m_loginMode = static_cast<LoginMode>(mode);
+    // Reset to appropriate tab when mode changes
+    if (m_loginMode == LoginMode::CardKey) {
+        m_currentTab = Tab::CardKey;
+    } else {
+        m_currentTab = Tab::Account;
+    }
+    m_errorMessage.clear();
+    m_successMessage.clear();
+}
+
+void LoginScreen::SetLoginResult(int result) {
+    m_loginResult = static_cast<LoginResult>(result);
+}
+
+void LoginScreen::Update(float deltaTime) {
+    // Handle login success delay
+    if (m_loginPending) {
+        m_loginDelayTimer -= deltaTime;
+        if (m_loginDelayTimer <= 0.0f) {
+            m_loginPending = false;
+            m_isLoggedIn = true;
+        }
+    }
+}
+
+void LoginScreen::HandleLoginAttempt() {
+    m_errorMessage.clear();
+    m_successMessage.clear();
+
+    switch (m_loginResult) {
+        case LoginResult::Success:
+            m_successMessage = i18n::T("login.success");
+            m_loginPending = true;
+            m_loginDelayTimer = 1.0f;  // 1 second delay
+            break;
+
+        case LoginResult::ConnectionError:
+            m_errorMessage = i18n::T("login.error_connection");
+            break;
+
+        case LoginResult::WrongCredentials:
+            m_errorMessage = i18n::T("login.error_credentials");
+            break;
+
+        case LoginResult::Expired:
+            m_errorMessage = i18n::T("login.error_expired");
+            break;
+    }
+}
+
 void LoginScreen::Render(int windowWidth, int windowHeight) {
     // Panel dimensions
     const float panelWidth = 420.0f;
@@ -43,20 +95,55 @@ void LoginScreen::Render(int windowWidth, int windowHeight) {
         ImGui::Spacing();
         ImGui::Spacing();
 
-        // Tab bar
-        const char* tabs[] = {
-            i18n::T("login.tab_cardkey"),
-            i18n::T("login.tab_account"),
-            i18n::T("login.tab_register"),
-            i18n::T("login.tab_password")
-        };
+        // Build tab array based on login mode
+        const char* tabs[4];
+        int tabCount = 0;
+
+        if (m_loginMode == LoginMode::CardKey) {
+            tabs[tabCount++] = i18n::T("login.tab_cardkey");
+        } else {
+            tabs[tabCount++] = i18n::T("login.tab_account");
+        }
+        tabs[tabCount++] = i18n::T("login.tab_register");
+        tabs[tabCount++] = i18n::T("login.tab_password");
 
         ImGui::SetCursorPosX(20);
         ImGui::PushItemWidth(panelWidth - 40);
 
-        int tabIndex = static_cast<int>(m_currentTab);
-        tabIndex = Widgets::TabBar("LoginTabs", tabs, 4, tabIndex);
-        m_currentTab = static_cast<Tab>(tabIndex);
+        // Map current tab to tab index
+        int tabIndex = 0;
+        if (m_loginMode == LoginMode::CardKey) {
+            switch (m_currentTab) {
+                case Tab::CardKey: tabIndex = 0; break;
+                case Tab::Register: tabIndex = 1; break;
+                case Tab::Password: tabIndex = 2; break;
+                default: tabIndex = 0; break;
+            }
+        } else {
+            switch (m_currentTab) {
+                case Tab::Account: tabIndex = 0; break;
+                case Tab::Register: tabIndex = 1; break;
+                case Tab::Password: tabIndex = 2; break;
+                default: tabIndex = 0; break;
+            }
+        }
+
+        int newTabIndex = Widgets::TabBar("LoginTabs", tabs, tabCount, tabIndex);
+
+        // Map back to Tab enum
+        if (m_loginMode == LoginMode::CardKey) {
+            switch (newTabIndex) {
+                case 0: m_currentTab = Tab::CardKey; break;
+                case 1: m_currentTab = Tab::Register; break;
+                case 2: m_currentTab = Tab::Password; break;
+            }
+        } else {
+            switch (newTabIndex) {
+                case 0: m_currentTab = Tab::Account; break;
+                case 1: m_currentTab = Tab::Register; break;
+                case 2: m_currentTab = Tab::Password; break;
+            }
+        }
 
         ImGui::PopItemWidth();
 
@@ -121,16 +208,23 @@ void LoginScreen::RenderCardKeyTab() {
 
     // Login button
     float buttonWidth = ImGui::GetContentRegionAvail().x;
+    bool disabled = m_loginPending;
+
+    if (disabled) {
+        ImGui::BeginDisabled();
+    }
+
     if (Widgets::GradientButton(i18n::T("login.btn_login"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
         // Validate
         if (strlen(m_cardKey) == 0) {
             m_errorMessage = i18n::T("login.error_empty_cardkey");
         } else {
-            // Mock login success
-            m_errorMessage.clear();
-            m_successMessage = "Login successful! (Mock)";
-            // m_isLoggedIn = true; // Enable this to proceed to next screen
+            HandleLoginAttempt();
         }
+    }
+
+    if (disabled) {
+        ImGui::EndDisabled();
     }
 }
 
@@ -161,15 +255,24 @@ void LoginScreen::RenderAccountTab() {
 
     // Login button
     float buttonWidth = ImGui::GetContentRegionAvail().x;
+    bool disabled = m_loginPending;
+
+    if (disabled) {
+        ImGui::BeginDisabled();
+    }
+
     if (Widgets::GradientButton(i18n::T("login.btn_login"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
         if (strlen(m_username) == 0) {
             m_errorMessage = i18n::T("login.error_empty_username");
         } else if (strlen(m_password) == 0) {
             m_errorMessage = i18n::T("login.error_empty_password");
         } else {
-            m_errorMessage.clear();
-            m_successMessage = "Login successful! (Mock)";
+            HandleLoginAttempt();
         }
+    }
+
+    if (disabled) {
+        ImGui::EndDisabled();
     }
 }
 
@@ -208,7 +311,7 @@ void LoginScreen::RenderRegisterTab() {
             m_errorMessage = i18n::T("login.error_password_mismatch");
         } else {
             m_errorMessage.clear();
-            m_successMessage = "Registration successful! (Mock)";
+            m_successMessage = i18n::T("login.register_success");
         }
     }
 }
@@ -242,7 +345,7 @@ void LoginScreen::RenderPasswordTab() {
             m_errorMessage = i18n::T("login.error_password_mismatch");
         } else {
             m_errorMessage.clear();
-            m_successMessage = "Password changed! (Mock)";
+            m_successMessage = i18n::T("login.password_changed");
         }
     }
 }
@@ -258,6 +361,8 @@ void LoginScreen::Reset() {
     m_newPassword[0] = '\0';
     m_rememberMe = false;
     m_isLoggedIn = false;
+    m_loginPending = false;
+    m_loginDelayTimer = 0.0f;
     m_errorMessage.clear();
     m_successMessage.clear();
 }

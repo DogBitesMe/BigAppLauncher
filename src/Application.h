@@ -4,6 +4,10 @@
 #include "graphics/VideoPlayer.h"
 #include "graphics/BlurEffect.h"
 #include "ui/screens/LoginScreen.h"
+#include "ui/screens/ProductsScreen.h"
+#include "ui/screens/GUIMenuScreen.h"
+#include "ui/DebugController.h"
+#include "ui/HUDOverlay.h"
 #include <Windows.h>
 #include <string>
 #include <memory>
@@ -48,11 +52,18 @@ private:
 
     // Screens
     std::unique_ptr<LoginScreen> m_loginScreen;
+    std::unique_ptr<ProductsScreen> m_productsScreen;
+    std::unique_ptr<GUIMenuScreen> m_guiMenuScreen;
+    std::unique_ptr<HUDOverlay> m_hudOverlay;
+
+    // Debug
+    std::unique_ptr<DebugController> m_debugController;
 
     // State
     enum class AppState {
         Login,
-        Products
+        Products,
+        GUIMenu
     };
     AppState m_state = AppState::Login;
 

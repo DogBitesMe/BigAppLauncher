@@ -16,7 +16,11 @@ set(SOURCES
     # UI
     ui/Theme.cpp
     ui/Widgets.cpp
+    ui/DebugController.cpp
+    ui/HUDOverlay.cpp
     ui/screens/LoginScreen.cpp
+    ui/screens/ProductsScreen.cpp
+    ui/screens/GUIMenuScreen.cpp
 
     # i18n
     i18n/Localization.cpp
@@ -38,7 +42,11 @@ set(HEADERS
     # UI
     ui/Theme.h
     ui/Widgets.h
+    ui/DebugController.h
+    ui/HUDOverlay.h
     ui/screens/LoginScreen.h
+    ui/screens/ProductsScreen.h
+    ui/screens/GUIMenuScreen.h
 
     # i18n
     i18n/Localization.h

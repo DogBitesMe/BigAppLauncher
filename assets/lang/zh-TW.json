@@ -23,7 +23,13 @@
         "error_empty_username": "請輸入使用者名稱",
         "error_empty_password": "請輸入密碼",
         "error_password_mismatch": "兩次密碼不一致",
-        "error_invalid_email": "郵箱格式不正確"
+        "error_invalid_email": "郵箱格式不正確",
+        "error_connection": "連接錯誤，請檢查網路",
+        "error_credentials": "帳號或密碼錯誤",
+        "error_expired": "帳號已過期",
+        "success": "登錄成功",
+        "register_success": "註冊成功",
+        "password_changed": "密碼修改成功"
     },
     "product": {
         "title": "產品列表",

@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "ui/Theme.h"
 #include "ui/IconsFontAwesome6.h"
+#include "ui/DebugController.h"
 #include "i18n/Localization.h"
 
 #include <imgui.h>
@@ -19,6 +20,10 @@ Application::Application() {
     m_videoPlayer = std::make_unique<VideoPlayer>();
     m_blurEffect = std::make_unique<BlurEffect>();
     m_loginScreen = std::make_unique<LoginScreen>();
+    m_productsScreen = std::make_unique<ProductsScreen>();
+    m_guiMenuScreen = std::make_unique<GUIMenuScreen>();
+    m_hudOverlay = std::make_unique<HUDOverlay>();
+    m_debugController = std::make_unique<DebugController>();
 }
 
 Application::~Application() {
@@ -462,6 +467,28 @@ void Application::Update() {
         m_videoPlayer->Update(deltaTime);
     }
 
+    // Update login screen (for delay timer)
+    if (m_loginScreen) {
+        m_loginScreen->Update(deltaTime);
+    }
+
+    // Update products screen
+    if (m_productsScreen) {
+        m_productsScreen->Update(deltaTime);
+
+        // Check if launch was requested
+        if (m_productsScreen->ShouldLaunchProduct()) {
+            m_productsScreen->ResetLaunch();
+            m_state = AppState::GUIMenu;
+        }
+    }
+
+    // Update HUD overlay
+    if (m_hudOverlay) {
+        m_hudOverlay->Update(deltaTime);
+        m_hudOverlay->SetFPS(1.0f / deltaTime);
+    }
+
     // Update logic
     if (m_loginScreen && m_loginScreen->IsLoggedIn()) {
         m_state = AppState::Products;
@@ -480,10 +507,11 @@ void Application::Render() {
     // Render video background first (only on login screen)
     if (m_state == AppState::Login) {
         RenderVideoBackground();
-    }
 
-    // Render window control buttons (minimize, maximize, close)
-    RenderWindowControls();
+        // Render window control buttons only on login screen
+        // (Products screen has its own controls in account bar)
+        RenderWindowControls();
+    }
 
     // Render current screen
     switch (m_state) {
@@ -501,14 +529,42 @@ void Application::Render() {
             break;
 
         case AppState::Products:
-            ImGui::SetNextWindowPos(ImVec2(m_width * 0.5f, m_height * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-            if (ImGui::Begin("Products", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
-                ImGui::Text("Product Screen - Coming Soon!");
+            if (m_productsScreen) {
+                // Set window control callback
+                m_productsScreen->SetWindowControlCallback([this](int action) {
+                    if (action == 0) {
+                        ShowWindow(m_hwnd, SW_MINIMIZE);
+                    } else if (action == 1) {
+                        m_running = false;
+                    }
+                });
+                m_productsScreen->Render(m_width, m_height);
             }
-            ImGui::End();
+            break;
+
+        case AppState::GUIMenu:
+            // Render HUD overlay (header/footer bars, messages)
+            if (m_hudOverlay) {
+                m_hudOverlay->Render(m_width, m_height);
+            }
+
+            // Render GUI menu
+            if (m_guiMenuScreen) {
+                m_guiMenuScreen->SetWindowControlCallback([this](int action) {
+                    if (action == 1) {
+                        // Close goes back to Products
+                        m_state = AppState::Products;
+                    }
+                });
+                m_guiMenuScreen->Render(m_width, m_height);
+            }
             break;
     }
 
+    // Render debug controller (always on top)
+    if (m_debugController) {
+        m_debugController->Render(m_loginScreen.get());
+    }
 
     // Render ImGui
     ImGui::Render();
