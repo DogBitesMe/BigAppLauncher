@@ -1,0 +1,57 @@
+{
+    "_language_name": "Chinese (Traditional)",
+    "_language_native": "繁體中文",
+    "app_name": "產品啟動器",
+    "login": {
+        "tab_cardkey": "卡密登錄",
+        "tab_account": "帳號登錄",
+        "tab_register": "註冊",
+        "tab_password": "改密",
+        "input_cardkey": "請輸入卡密",
+        "input_username": "使用者名稱",
+        "input_password": "密碼",
+        "input_confirm_password": "確認密碼",
+        "input_email": "電子郵件",
+        "input_old_password": "舊密碼",
+        "input_new_password": "新密碼",
+        "btn_login": "登錄",
+        "btn_register": "註冊",
+        "btn_change_password": "確認修改",
+        "remember_me": "記住我",
+        "forgot_password": "忘記密碼？",
+        "error_empty_cardkey": "請輸入卡密",
+        "error_empty_username": "請輸入使用者名稱",
+        "error_empty_password": "請輸入密碼",
+        "error_password_mismatch": "兩次密碼不一致",
+        "error_invalid_email": "郵箱格式不正確"
+    },
+    "product": {
+        "title": "產品列表",
+        "btn_play": "開始遊戲",
+        "btn_update": "更新",
+        "btn_download": "下載",
+        "btn_install": "安裝",
+        "status_checking": "檢查更新中...",
+        "status_ready": "已是最新版本",
+        "status_update_available": "有新版本可用",
+        "status_downloading": "下載中...",
+        "status_installing": "安裝中..."
+    },
+    "settings": {
+        "title": "設定",
+        "language": "語言",
+        "theme": "主題",
+        "auto_update": "自動檢查更新",
+        "minimize_to_tray": "最小化到系統匣"
+    },
+    "common": {
+        "ok": "確定",
+        "cancel": "取消",
+        "close": "關閉",
+        "save": "儲存",
+        "loading": "載入中...",
+        "error": "錯誤",
+        "success": "成功",
+        "warning": "警告"
+    }
+}

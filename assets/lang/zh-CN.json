@@ -1,0 +1,57 @@
+{
+    "_language_name": "Chinese (Simplified)",
+    "_language_native": "简体中文",
+    "app_name": "产品启动器",
+    "login": {
+        "tab_cardkey": "卡密登录",
+        "tab_account": "账号登录",
+        "tab_register": "注册",
+        "tab_password": "改密",
+        "input_cardkey": "请输入卡密",
+        "input_username": "用户名",
+        "input_password": "密码",
+        "input_confirm_password": "确认密码",
+        "input_email": "电子邮件",
+        "input_old_password": "旧密码",
+        "input_new_password": "新密码",
+        "btn_login": "登录",
+        "btn_register": "注册",
+        "btn_change_password": "确认修改",
+        "remember_me": "记住我",
+        "forgot_password": "忘记密码？",
+        "error_empty_cardkey": "请输入卡密",
+        "error_empty_username": "请输入用户名",
+        "error_empty_password": "请输入密码",
+        "error_password_mismatch": "两次密码不一致",
+        "error_invalid_email": "邮箱格式不正确"
+    },
+    "product": {
+        "title": "产品列表",
+        "btn_play": "开始游戏",
+        "btn_update": "更新",
+        "btn_download": "下载",
+        "btn_install": "安装",
+        "status_checking": "检查更新中...",
+        "status_ready": "已是最新版本",
+        "status_update_available": "有新版本可用",
+        "status_downloading": "下载中...",
+        "status_installing": "安装中..."
+    },
+    "settings": {
+        "title": "设置",
+        "language": "语言",
+        "theme": "主题",
+        "auto_update": "自动检查更新",
+        "minimize_to_tray": "最小化到托盘"
+    },
+    "common": {
+        "ok": "确定",
+        "cancel": "取消",
+        "close": "关闭",
+        "save": "保存",
+        "loading": "加载中...",
+        "error": "错误",
+        "success": "成功",
+        "warning": "警告"
+    }
+}

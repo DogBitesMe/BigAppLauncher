@@ -1,0 +1,33 @@
+# Build directories
+build/
+out/
+cmake-build-*/
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.user
+*.sln.docstates
+.idea/
+
+# Compiled files
+*.obj
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies (will be fetched by CMake)
+external/imgui/
+external/json/
+external/stb/
+
+# Claude Code
+.claude/

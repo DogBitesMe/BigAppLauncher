@@ -1,0 +1,57 @@
+{
+    "_language_name": "English",
+    "_language_native": "English",
+    "app_name": "App Launcher",
+    "login": {
+        "tab_cardkey": "Card Key",
+        "tab_account": "Account",
+        "tab_register": "Register",
+        "tab_password": "Password",
+        "input_cardkey": "Enter card key",
+        "input_username": "Username",
+        "input_password": "Password",
+        "input_confirm_password": "Confirm Password",
+        "input_email": "Email",
+        "input_old_password": "Old Password",
+        "input_new_password": "New Password",
+        "btn_login": "Login",
+        "btn_register": "Register",
+        "btn_change_password": "Change Password",
+        "remember_me": "Remember me",
+        "forgot_password": "Forgot password?",
+        "error_empty_cardkey": "Please enter card key",
+        "error_empty_username": "Please enter username",
+        "error_empty_password": "Please enter password",
+        "error_password_mismatch": "Passwords do not match",
+        "error_invalid_email": "Invalid email format"
+    },
+    "product": {
+        "title": "Products",
+        "btn_play": "Play",
+        "btn_update": "Update",
+        "btn_download": "Download",
+        "btn_install": "Install",
+        "status_checking": "Checking for updates...",
+        "status_ready": "Up to date",
+        "status_update_available": "Update available",
+        "status_downloading": "Downloading...",
+        "status_installing": "Installing..."
+    },
+    "settings": {
+        "title": "Settings",
+        "language": "Language",
+        "theme": "Theme",
+        "auto_update": "Auto check for updates",
+        "minimize_to_tray": "Minimize to tray"
+    },
+    "common": {
+        "ok": "OK",
+        "cancel": "Cancel",
+        "close": "Close",
+        "save": "Save",
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "warning": "Warning"
+    }
+}
