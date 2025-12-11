@@ -27,6 +27,7 @@ private:
     bool InitializeBlurEffect();
     void RenderVideoBackground();
     void RenderBlurredPanelBackground(float x, float y, float width, float height);
+    void RenderWindowControls();
 
     void Update();
     void Render();

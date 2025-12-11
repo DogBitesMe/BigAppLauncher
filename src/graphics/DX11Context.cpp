@@ -108,12 +108,24 @@ void DX11Context::Resize(int width, int height) {
         return;
     }
 
+    // Safety check - ensure DX11 is initialized
+    if (!m_swapChain || !m_device || !m_context) {
+        return;
+    }
+
     m_width = width;
     m_height = height;
 
+    // Flush any pending GPU work
+    m_context->ClearState();
+    m_context->Flush();
+
     CleanupRenderTarget();
 
-    m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+    HRESULT hr = m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+    if (FAILED(hr)) {
+        return;
+    }
 
     CreateRenderTarget();
 }
