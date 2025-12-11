@@ -251,6 +251,13 @@ static char g_hotkeyDisplayBuffer[128];
 
 const char* GetKeyName(int vk) {
     switch (vk) {
+        // Mouse buttons
+        case 0x01: return "Mouse1";      // VK_LBUTTON
+        case 0x02: return "Mouse2";      // VK_RBUTTON
+        case 0x04: return "Mouse3";      // VK_MBUTTON
+        case 0x05: return "Mouse4";      // VK_XBUTTON1
+        case 0x06: return "Mouse5";      // VK_XBUTTON2
+
         case 0x08: return "Backspace";
         case 0x09: return "Tab";
         case 0x0D: return "Enter";

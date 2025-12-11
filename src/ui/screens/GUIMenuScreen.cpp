@@ -81,10 +81,10 @@ void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
         ImGui::SetCursorPos(ImVec2(PADDING, HEADER_HEIGHT + 8));
         ImGui::PushItemWidth(windowSize.x - PADDING * 2);
 
-        const char* tabIcons[] = { ICON_FA_EYE, ICON_FA_BOX, ICON_FA_SATELLITE_DISH, ICON_FA_GEAR };
-        const char* tabLabels[] = { "Visual", "Items", "Radar", "General" };
+        const char* tabIcons[] = { ICON_FA_EYE, ICON_FA_BOX, ICON_FA_SATELLITE_DISH, ICON_FA_GUN, ICON_FA_GEAR };
+        const char* tabLabels[] = { "Visual", "Items", "Radar", "Weapon", "General" };
 
-        m_tabIndex = StyleUI::TabBarLarge("##MainTabs", tabIcons, tabLabels, 4, m_tabIndex);
+        m_tabIndex = StyleUI::TabBarLarge("##MainTabs", tabIcons, tabLabels, 5, m_tabIndex);
         m_currentTab = static_cast<Tab>(m_tabIndex);
 
         ImGui::PopItemWidth();
@@ -107,6 +107,9 @@ void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
                 break;
             case Tab::Radar:
                 RenderRadarTab(windowSize.x - PADDING * 2, contentHeight);
+                break;
+            case Tab::Weapon:
+                RenderWeaponTab(windowSize.x - PADDING * 2, contentHeight);
                 break;
             case Tab::General:
                 RenderGeneralTab(windowSize.x - PADDING * 2, contentHeight);
@@ -240,6 +243,77 @@ void GUIMenuScreen::RenderRadarTab(float width, float height) {
         StyleUI::CheckboxClassic("Classic Checkbox", &m_checkboxValue3);
 
         StyleUI::EndGroupBox();
+    }
+}
+
+void GUIMenuScreen::RenderWeaponTab(float width, float height) {
+    // SubTab Style Selector
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_SLIDERS, "SubTab Style")) {
+        const char* styleLabels[] = { "Underline", "Pill" };
+        m_weaponSubTabStyle = StyleUI::RadioButtonGroup("##SubTabStyleSelector", styleLabels, 2, m_weaponSubTabStyle);
+        StyleUI::EndGroupBox();
+    }
+
+    // SubTab Navigation
+    const char* subTabLabels[] = { "Rifle", "SMG", "Sniper", "Pistol" };
+    const char* subTabIcons[] = { ICON_FA_CROSSHAIRS, ICON_FA_BOLT, ICON_FA_BULLSEYE, ICON_FA_HAND };
+    StyleUI::SubTabStyle style = m_weaponSubTabStyle == 0 ? StyleUI::SubTabStyle::Underline : StyleUI::SubTabStyle::Pill;
+    m_weaponSubTabIndex = StyleUI::SubTabIcon("##WeaponSubTabs", subTabIcons, subTabLabels, 4, m_weaponSubTabIndex, style);
+
+    ImGui::Spacing();
+
+    // Content based on selected sub-tab
+    switch (m_weaponSubTabIndex) {
+        case 0: // Rifle
+            if (StyleUI::BeginGroupBoxEx(ICON_FA_CROSSHAIRS, "Rifle Settings")) {
+                StyleUI::ToggleSwitch("No Recoil", &m_rifleNoRecoil);
+                StyleUI::Checkbox("No Spread", &m_rifleNoSpread);
+                ImGui::Spacing();
+                StyleUI::SliderFloat("Damage Multiplier", &m_rifleDamageMultiplier, 1.0f, 5.0f, "%.1fx");
+                StyleUI::EndGroupBox();
+            }
+            break;
+
+        case 1: // SMG
+            if (StyleUI::BeginGroupBoxEx(ICON_FA_BOLT, "SMG Settings")) {
+                StyleUI::ToggleSwitch("No Recoil", &m_smgNoRecoil);
+                StyleUI::Checkbox("Rapid Fire", &m_smgRapidFire);
+                ImGui::Spacing();
+                StyleUI::SliderFloat("Fire Rate Multiplier", &m_smgFireRateMultiplier, 1.0f, 3.0f, "%.1fx");
+                StyleUI::EndGroupBox();
+            }
+            break;
+
+        case 2: // Sniper
+            if (StyleUI::BeginGroupBoxEx(ICON_FA_BULLSEYE, "Sniper Settings")) {
+                StyleUI::ToggleSwitch("No Sway", &m_sniperNoSway);
+                StyleUI::Checkbox("Instant Aim", &m_sniperInstantAim);
+                ImGui::Spacing();
+                StyleUI::SliderFloat("Zoom Multiplier", &m_sniperZoomMultiplier, 1.0f, 10.0f, "%.1fx");
+                StyleUI::EndGroupBox();
+            }
+            break;
+
+        case 3: // Pistol
+            if (StyleUI::BeginGroupBoxEx(ICON_FA_HAND, "Pistol Settings")) {
+                StyleUI::ToggleSwitch("No Recoil", &m_pistolNoRecoil);
+                StyleUI::Checkbox("Auto Fire", &m_pistolAutoFire);
+                ImGui::Spacing();
+
+                const char* fireModes[] = { "Semi-Auto", "Burst", "Full Auto" };
+                StyleUI::Combo("Fire Mode", &m_pistolFireModeIndex, fireModes, 3);
+
+                ImGui::Spacing();
+                StyleUI::SeparatorText("RadioButton Demo");
+
+                // Demo classic radio buttons
+                StyleUI::RadioButtonClassic("Semi-Auto Mode", &m_pistolFireModeIndex, 0);
+                StyleUI::RadioButtonClassic("Burst Mode", &m_pistolFireModeIndex, 1);
+                StyleUI::RadioButtonClassic("Full Auto Mode", &m_pistolFireModeIndex, 2);
+
+                StyleUI::EndGroupBox();
+            }
+            break;
     }
 }
 

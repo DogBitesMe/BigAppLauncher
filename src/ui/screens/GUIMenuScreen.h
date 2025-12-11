@@ -25,6 +25,7 @@ private:
         Visual = 0,
         Items,
         Radar,
+        Weapon,
         General
     };
     Tab m_currentTab = Tab::Visual;
@@ -34,7 +35,33 @@ private:
     void RenderVisualTab(float width, float height);
     void RenderItemsTab(float width, float height);
     void RenderRadarTab(float width, float height);
+    void RenderWeaponTab(float width, float height);
     void RenderGeneralTab(float width, float height);
+
+    // Weapon tab sub-tabs
+    int m_weaponSubTabIndex = 0;
+    int m_weaponSubTabStyle = 0;  // 0 = Underline, 1 = Pill
+
+    // Weapon settings per category
+    // Rifle settings
+    bool m_rifleNoRecoil = false;
+    bool m_rifleNoSpread = false;
+    float m_rifleDamageMultiplier = 1.0f;
+
+    // SMG settings
+    bool m_smgNoRecoil = false;
+    bool m_smgRapidFire = false;
+    float m_smgFireRateMultiplier = 1.0f;
+
+    // Sniper settings
+    bool m_sniperNoSway = false;
+    bool m_sniperInstantAim = false;
+    float m_sniperZoomMultiplier = 1.0f;
+
+    // Pistol settings
+    bool m_pistolNoRecoil = false;
+    bool m_pistolAutoFire = false;
+    int m_pistolFireModeIndex = 0;
 
     // Sample state for demos
     bool m_checkboxValue1 = true;

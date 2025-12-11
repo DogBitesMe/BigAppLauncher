@@ -125,12 +125,44 @@ bool SliderFloatGradient(const char* label, float* v, float min, float max,
                          const ImVec4& leftColor, const ImVec4& rightColor, const char* format = "%.1f");
 
 // Tab Systems
+
+// Tab indicator style configuration
+struct TabStyle {
+    bool gradientIndicator = false;              // Use gradient for indicator
+    ImVec4 indicatorGradientStart = ImVec4(0.26f, 0.59f, 0.98f, 1.0f);  // Left color
+    ImVec4 indicatorGradientEnd = ImVec4(0.5f, 0.8f, 1.0f, 1.0f);       // Right color
+    float indicatorWidthRatio = 1.0f;            // 0.0-1.0, ratio of tab width (1.0 = full width)
+    bool indicatorCentered = true;               // Center the indicator
+    float indicatorHeight = 3.0f;                // Indicator thickness
+    float indicatorPadding = 4.0f;               // Padding from tab edges when full width
+};
+
 // Large tabs with icons and text (for main sections)
 int TabBarLarge(const char* id, const char** icons, const char** labels, int count, int current);
+int TabBarLargeEx(const char* id, const char** icons, const char** labels, int count, int current, const TabStyle& style);
 
 // Small tabs (text only or with icons)
 int TabBarSmall(const char* id, const char** labels, int count, int current);
 int TabBarSmallIcon(const char* id, const char** icons, const char** labels, int count, int current);
+
+// RadioButton - Two styles
+// Segmented control (horizontal tab-like buttons)
+int RadioButtonGroup(const char* id, const char** labels, int count, int current);
+int RadioButtonGroupIcon(const char* id, const char** icons, const char** labels, int count, int current);
+
+// Classic style (circle indicator)
+bool RadioButton(const char* label, int* v, int buttonValue);       // Text left, indicator right
+bool RadioButtonClassic(const char* label, int* v, int buttonValue); // Indicator left, text right
+
+// SubTab - Smaller tabs for sub-page navigation
+enum class SubTabStyle {
+    Underline = 0,  // Underline indicator below text
+    Pill = 1        // Pill/rounded background fill
+};
+
+// Text-based sub-tabs with optional icons
+int SubTab(const char* id, const char** labels, int count, int current, SubTabStyle style = SubTabStyle::Underline);
+int SubTabIcon(const char* id, const char** icons, const char** labels, int count, int current, SubTabStyle style = SubTabStyle::Underline);
 
 // Hotkey Input
 bool HotkeyInput(const char* label, HotkeyBinding* binding);
