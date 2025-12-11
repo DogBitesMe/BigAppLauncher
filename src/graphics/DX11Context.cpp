@@ -88,6 +88,8 @@ bool DX11Context::CreateRenderTarget() {
 }
 
 void DX11Context::CleanupRenderTarget() {
+    m_backbufferCopySRV.Reset();
+    m_backbufferCopy.Reset();
     m_renderTargetView.Reset();
 }
 
@@ -114,4 +116,32 @@ void DX11Context::Resize(int width, int height) {
     m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
 
     CreateRenderTarget();
+}
+
+ID3D11ShaderResourceView* DX11Context::CopyBackbuffer() {
+    // Get backbuffer
+    ComPtr<ID3D11Texture2D> backBuffer;
+    HRESULT hr = m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf()));
+    if (FAILED(hr)) return nullptr;
+
+    // Create copy texture if needed
+    if (!m_backbufferCopy) {
+        D3D11_TEXTURE2D_DESC desc;
+        backBuffer->GetDesc(&desc);
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.CPUAccessFlags = 0;
+        desc.MiscFlags = 0;
+
+        hr = m_device->CreateTexture2D(&desc, nullptr, &m_backbufferCopy);
+        if (FAILED(hr)) return nullptr;
+
+        hr = m_device->CreateShaderResourceView(m_backbufferCopy.Get(), nullptr, &m_backbufferCopySRV);
+        if (FAILED(hr)) return nullptr;
+    }
+
+    // Copy backbuffer to our texture
+    m_context->CopyResource(m_backbufferCopy.Get(), backBuffer.Get());
+
+    return m_backbufferCopySRV.Get();
 }

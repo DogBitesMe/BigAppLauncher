@@ -12,6 +12,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 Application::Application() {
     m_dx11 = std::make_unique<DX11Context>();
     m_videoPlayer = std::make_unique<VideoPlayer>();
+    m_blurEffect = std::make_unique<BlurEffect>();
     m_loginScreen = std::make_unique<LoginScreen>();
 }
 
@@ -72,6 +73,9 @@ bool Application::Initialize(HINSTANCE hInstance, int width, int height, const w
 
     // Initialize video background
     InitializeVideoBackground();
+
+    // Initialize blur effect
+    InitializeBlurEffect();
 
     // Load default language
     i18n::Localization::Instance().SetBasePath("assets/lang");
@@ -193,6 +197,86 @@ void Application::RenderVideoBackground() {
     );
 }
 
+bool Application::InitializeBlurEffect() {
+    if (!m_blurEffect) return false;
+    return m_blurEffect->Initialize(m_dx11->GetDevice(), m_dx11->GetContext(), m_width, m_height);
+}
+
+void Application::RenderBlurredPanelBackground(float x, float y, float width, float height) {
+    if (!m_blurEffect || !m_videoPlayer || !m_videoPlayer->IsLoaded()) return;
+
+    // Get video texture
+    auto* videoSRV = m_videoPlayer->GetTextureSRV();
+    if (!videoSRV) return;
+
+    // Apply blur to the video texture
+    auto* blurredSRV = m_blurEffect->Apply(videoSRV, 2.5f);
+    if (!blurredSRV) return;
+
+    // Reset render target after blur effect (it changes the render target)
+    ID3D11RenderTargetView* rtv = m_dx11->GetRenderTargetView();
+    m_dx11->GetContext()->OMSetRenderTargets(1, &rtv, nullptr);
+
+    // Calculate UV coordinates for the panel region (based on video aspect ratio)
+    float videoAspect = (float)m_videoPlayer->GetWidth() / (float)m_videoPlayer->GetHeight();
+    float windowAspect = (float)m_width / (float)m_height;
+
+    float videoDrawWidth, videoDrawHeight;
+    float videoOffsetX = 0, videoOffsetY = 0;
+
+    if (windowAspect > videoAspect) {
+        videoDrawWidth = (float)m_width;
+        videoDrawHeight = videoDrawWidth / videoAspect;
+        videoOffsetY = ((float)m_height - videoDrawHeight) * 0.5f;
+    } else {
+        videoDrawHeight = (float)m_height;
+        videoDrawWidth = videoDrawHeight * videoAspect;
+        videoOffsetX = ((float)m_width - videoDrawWidth) * 0.5f;
+    }
+
+    // Map panel coordinates to video UV space
+    float u0 = (x - videoOffsetX) / videoDrawWidth;
+    float v0 = (y - videoOffsetY) / videoDrawHeight;
+    float u1 = (x + width - videoOffsetX) / videoDrawWidth;
+    float v1 = (y + height - videoOffsetY) / videoDrawHeight;
+
+    // Clamp UVs
+    u0 = (u0 < 0) ? 0 : (u0 > 1 ? 1 : u0);
+    v0 = (v0 < 0) ? 0 : (v0 > 1 ? 1 : v0);
+    u1 = (u1 < 0) ? 0 : (u1 > 1 ? 1 : u1);
+    v1 = (v1 < 0) ? 0 : (v1 > 1 ? 1 : v1);
+
+    // Draw blurred region as panel background
+    ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+    drawList->AddImageRounded(
+        (ImTextureID)blurredSRV,
+        ImVec2(x, y),
+        ImVec2(x + width, y + height),
+        ImVec2(u0, v0),
+        ImVec2(u1, v1),
+        IM_COL32(255, 255, 255, 255),
+        Theme::Size::Rounding
+    );
+
+    // Add a subtle tint overlay for the frosted glass effect
+    drawList->AddRectFilled(
+        ImVec2(x, y),
+        ImVec2(x + width, y + height),
+        IM_COL32(15, 15, 25, 160),
+        Theme::Size::Rounding
+    );
+
+    // Add subtle border glow
+    drawList->AddRect(
+        ImVec2(x, y),
+        ImVec2(x + width, y + height),
+        IM_COL32(255, 255, 255, 30),
+        Theme::Size::Rounding,
+        0,
+        1.5f
+    );
+}
+
 void Application::ShutdownImGui() {
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
@@ -262,6 +346,13 @@ void Application::Render() {
     switch (m_state) {
         case AppState::Login:
             if (m_loginScreen) {
+                // Render blurred panel background (frosted glass effect)
+                const float panelWidth = 420.0f;
+                const float panelHeight = 480.0f;
+                float panelX = (m_width - panelWidth) * 0.5f;
+                float panelY = (m_height - panelHeight) * 0.5f;
+                RenderBlurredPanelBackground(panelX, panelY, panelWidth, panelHeight);
+
                 m_loginScreen->Render(m_width, m_height);
             }
             break;
@@ -289,10 +380,17 @@ void Application::OnResize(int width, int height) {
         m_width = width;
         m_height = height;
         m_dx11->Resize(width, height);
+        if (m_blurEffect) {
+            m_blurEffect->Resize(width, height);
+        }
     }
 }
 
 void Application::Shutdown() {
+    if (m_blurEffect) {
+        m_blurEffect->Shutdown();
+    }
+
     if (m_videoPlayer) {
         m_videoPlayer->Shutdown();
     }

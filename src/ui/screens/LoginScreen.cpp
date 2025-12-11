@@ -13,14 +13,12 @@ void LoginScreen::Render(int windowWidth, int windowHeight) {
     float panelX = (windowWidth - panelWidth) * 0.5f;
     float panelY = (windowHeight - panelHeight) * 0.5f;
 
-    // Draw semi-transparent panel background
+    // Panel background is now handled by Application with blur effect
     ImVec2 panelPos(panelX, panelY);
-    ImVec2 panelSize(panelWidth, panelHeight);
-    Widgets::DrawPanelBackground(panelPos, panelSize, 0.88f);
 
     // Set window position and size
     ImGui::SetNextWindowPos(panelPos);
-    ImGui::SetNextWindowSize(panelSize);
+    ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
 
     ImGuiWindowFlags windowFlags =
         ImGuiWindowFlags_NoTitleBar |

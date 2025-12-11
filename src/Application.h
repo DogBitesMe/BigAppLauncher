@@ -2,6 +2,7 @@
 
 #include "graphics/DX11Context.h"
 #include "graphics/VideoPlayer.h"
+#include "graphics/BlurEffect.h"
 #include "ui/screens/LoginScreen.h"
 #include <Windows.h>
 #include <string>
@@ -23,7 +24,9 @@ private:
     bool InitializeImGui();
     void ShutdownImGui();
     bool InitializeVideoBackground();
+    bool InitializeBlurEffect();
     void RenderVideoBackground();
+    void RenderBlurredPanelBackground(float x, float y, float width, float height);
 
     void Update();
     void Render();
@@ -40,6 +43,7 @@ private:
     // Graphics
     std::unique_ptr<DX11Context> m_dx11;
     std::unique_ptr<VideoPlayer> m_videoPlayer;
+    std::unique_ptr<BlurEffect> m_blurEffect;
 
     // Screens
     std::unique_ptr<LoginScreen> m_loginScreen;

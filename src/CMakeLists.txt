@@ -11,6 +11,7 @@ set(SOURCES
     graphics/DX11Context.cpp
     graphics/TextureManager.cpp
     graphics/VideoPlayer.cpp
+    graphics/BlurEffect.cpp
 
     # UI
     ui/Theme.cpp
@@ -32,6 +33,7 @@ set(HEADERS
     graphics/DX11Context.h
     graphics/TextureManager.h
     graphics/VideoPlayer.h
+    graphics/BlurEffect.h
 
     # UI
     ui/Theme.h

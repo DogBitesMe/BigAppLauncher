@@ -29,6 +29,10 @@ public:
     int GetWidth() const { return m_width; }
     int GetHeight() const { return m_height; }
 
+    // Copy backbuffer to a texture for effects
+    ID3D11ShaderResourceView* CopyBackbuffer();
+    ID3D11ShaderResourceView* GetBackbufferCopySRV() const { return m_backbufferCopySRV.Get(); }
+
 private:
     bool CreateRenderTarget();
     void CleanupRenderTarget();
@@ -37,6 +41,10 @@ private:
     ComPtr<ID3D11DeviceContext> m_context;
     ComPtr<IDXGISwapChain> m_swapChain;
     ComPtr<ID3D11RenderTargetView> m_renderTargetView;
+
+    // Backbuffer copy for effects
+    ComPtr<ID3D11Texture2D> m_backbufferCopy;
+    ComPtr<ID3D11ShaderResourceView> m_backbufferCopySRV;
 
     int m_width = 0;
     int m_height = 0;
