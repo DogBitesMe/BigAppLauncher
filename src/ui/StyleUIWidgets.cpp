@@ -33,6 +33,65 @@ static ImU32 GetGradientColor(const ImVec4& top, const ImVec4& bottom, float t) 
 }
 
 //-----------------------------------------------------------------------------
+// Glass Effect Drawing
+//-----------------------------------------------------------------------------
+
+void DrawGlassRect(const ImVec2& pos, const ImVec2& size, const GlassConfig& config) {
+    if (!IsGlassAvailable()) {
+        // Fallback: draw solid background if glass not available
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        dl->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y),
+                         config.tintColor, config.rounding);
+        if (config.drawBorder) {
+            dl->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y),
+                       config.borderColor, config.rounding, 0, config.borderThickness);
+        }
+        return;
+    }
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImVec2 screenSize = ImGui::GetIO().DisplaySize;
+
+    // Calculate UV coordinates based on screen position
+    ImVec2 uv0(pos.x / screenSize.x, pos.y / screenSize.y);
+    ImVec2 uv1((pos.x + size.x) / screenSize.x, (pos.y + size.y) / screenSize.y);
+
+    // Clamp UVs to valid range
+    uv0.x = (uv0.x < 0) ? 0 : (uv0.x > 1 ? 1 : uv0.x);
+    uv0.y = (uv0.y < 0) ? 0 : (uv0.y > 1 ? 1 : uv0.y);
+    uv1.x = (uv1.x < 0) ? 0 : (uv1.x > 1 ? 1 : uv1.x);
+    uv1.y = (uv1.y < 0) ? 0 : (uv1.y > 1 ? 1 : uv1.y);
+
+    // Draw blurred background with alpha
+    ImU32 blurColor = IM_COL32(255, 255, 255, (int)(255 * config.alpha));
+    dl->AddImageRounded(
+        (ImTextureID)GetBlurredBackgroundSRV(),
+        pos,
+        ImVec2(pos.x + size.x, pos.y + size.y),
+        uv0, uv1,
+        blurColor,
+        config.rounding
+    );
+
+    // Draw tint overlay for frosted glass effect
+    dl->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y),
+                     config.tintColor, config.rounding);
+
+    // Draw subtle border glow
+    if (config.drawBorder) {
+        dl->AddRect(pos, ImVec2(pos.x + size.x, pos.y + size.y),
+                   config.borderColor, config.rounding, 0, config.borderThickness);
+    }
+}
+
+void DrawGlassRectSimple(const ImVec2& pos, const ImVec2& size, float alpha, float rounding) {
+    GlassConfig config;
+    config.alpha = alpha;
+    config.rounding = rounding;
+    DrawGlassRect(pos, size, config);
+}
+
+//-----------------------------------------------------------------------------
 // GroupBox
 //-----------------------------------------------------------------------------
 
@@ -113,6 +172,105 @@ bool BeginGroupBoxEx(const char* icon, const char* label, const ImVec2& size) {
 void EndGroupBox() {
     if (g_groupBoxDepth <= 0) return;
     g_groupBoxDepth--;
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+    ImGui::PopID();
+
+    ImGui::Spacing();
+}
+
+//-----------------------------------------------------------------------------
+// Glass GroupBox
+//-----------------------------------------------------------------------------
+
+static int g_glassGroupBoxDepth = 0;
+static GlassConfig g_currentGlassConfig;
+
+bool BeginGroupBoxGlass(const char* label, const ImVec2& size, const GlassConfig& config) {
+    return BeginGroupBoxExGlass(nullptr, label, size, config);
+}
+
+bool BeginGroupBoxExGlass(const char* icon, const char* label, const ImVec2& size, const GlassConfig& config) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    // Calculate actual size
+    ImVec2 contentSize = size;
+    if (contentSize.x <= 0) contentSize.x = ImGui::GetContentRegionAvail().x;
+    if (contentSize.y <= 0) contentSize.y = 0; // Will auto-resize
+
+    // Store for EndGroupBoxGlass
+    g_glassGroupBoxDepth++;
+    g_currentGlassConfig = config;
+
+    ImGui::PushID(id);
+
+    // Begin child with transparent background (glass effect will be drawn separately)
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, config.rounding);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(sizes.FramePadding, sizes.FramePadding));
+
+    bool opened = ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+
+    // Get actual window position and size for glass effect
+    ImVec2 windowPos = ImGui::GetWindowPos();
+    ImVec2 windowSize = ImGui::GetWindowSize();
+
+    // Draw the glass effect
+    GlassConfig glassConfig = config;
+    glassConfig.rounding = sizes.Rounding;
+    DrawGlassRect(windowPos, windowSize, glassConfig);
+
+    // Draw header background (slightly more opaque)
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    float windowWidth = ImGui::GetWindowSize().x;
+
+    // Header bar (semi-transparent overlay on top of glass)
+    drawList->AddRectFilled(
+        windowPos,
+        ImVec2(windowPos.x + windowWidth, windowPos.y + sizes.GroupBoxHeaderHeight),
+        IM_COL32(0, 0, 0, 80), // Subtle dark overlay for header
+        sizes.Rounding,
+        ImDrawFlags_RoundCornersTop
+    );
+
+    // Header text
+    float textY = windowPos.y + (sizes.GroupBoxHeaderHeight - ImGui::GetFontSize()) * 0.5f;
+
+    if (icon && icon[0]) {
+        // Icon + Label
+        char fullLabel[256];
+        snprintf(fullLabel, sizeof(fullLabel), "%s  %s", icon, label);
+        drawList->AddText(
+            ImVec2(windowPos.x + sizes.FramePadding, textY),
+            ColorToU32(colors.Text),
+            fullLabel
+        );
+    } else {
+        drawList->AddText(
+            ImVec2(windowPos.x + sizes.FramePadding, textY),
+            ColorToU32(colors.Text),
+            label
+        );
+    }
+
+    // Move cursor below header
+    ImGui::SetCursorPosY(sizes.GroupBoxHeaderHeight + sizes.FramePadding);
+
+    return opened;
+}
+
+void EndGroupBoxGlass() {
+    if (g_glassGroupBoxDepth <= 0) return;
+    g_glassGroupBoxDepth--;
 
     ImGui::EndChild();
     ImGui::PopStyleVar(2);
@@ -257,8 +415,8 @@ bool Checkbox(const char* label, bool* v) {
     ImVec2 boxMin(boxX, boxY);
     ImVec2 boxMax(boxX + boxSize, boxY + boxSize);
 
-    // Animate check based on current value
-    float animT = Animate(id, *v ? 1.0f : 0.0f, 12.0f);
+    // Animate check based on current value (use linear for smooth fade without oscillation)
+    float animT = AnimateLinear(id, *v ? 1.0f : 0.0f, 15.0f);
 
     // Background color
     ImVec4 bgColor = LerpColor(hovered ? colors.BorderHover : colors.Border, colors.Primary, animT);
@@ -317,7 +475,8 @@ bool CheckboxClassic(const char* label, bool* v) {
     ImVec2 boxMin(pos.x, boxY);
     ImVec2 boxMax(pos.x + boxSize, boxY + boxSize);
 
-    float animT = Animate(id, *v ? 1.0f : 0.0f, 12.0f);
+    // Use linear animation for smooth fade without oscillation
+    float animT = AnimateLinear(id, *v ? 1.0f : 0.0f, 15.0f);
 
     ImVec4 bgColor = LerpColor(hovered ? colors.BorderHover : colors.Border, colors.Primary, animT);
     dl->AddRectFilled(boxMin, boxMax, ColorToU32(bgColor), sizes.Rounding * 0.5f);
@@ -535,9 +694,20 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
         bool isActive = (i == current);
         bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
 
-        // Tab background
+        // Tab background with gradient for active tab
         if (isActive) {
-            dl->AddRectFilled(tabBB.Min, tabBB.Max, ColorToU32(ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.15f)), sizes.Rounding);
+            // Gradient background matching slider/button style (0.7x to 1.8x)
+            ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+            ImU32 gradLeft = ColorToU32(ImVec4(
+                baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
+            ));
+            ImU32 gradRight = ColorToU32(ImVec4(
+                std::min(baseColor.x * 1.8f, 1.0f),
+                std::min(baseColor.y * 1.8f, 1.0f),
+                std::min(baseColor.z * 1.8f, 1.0f),
+                baseColor.w
+            ));
+            dl->AddRectFilledMultiColor(tabBB.Min, tabBB.Max, gradLeft, gradRight, gradRight, gradLeft);
         } else if (hovered) {
             dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 10), sizes.Rounding);
         }
@@ -638,9 +808,20 @@ int TabBarSmallIcon(const char* id, const char** icons, const char** labels, int
         bool isActive = (i == current);
         bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
 
-        // Tab background
+        // Tab background with gradient for active tab
         if (isActive) {
-            dl->AddRectFilled(tabBB.Min, tabBB.Max, ColorToU32(ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.15f)), sizes.Rounding);
+            // Gradient background matching slider/button style (0.7x to 1.8x)
+            ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+            ImU32 gradLeft = ColorToU32(ImVec4(
+                baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
+            ));
+            ImU32 gradRight = ColorToU32(ImVec4(
+                std::min(baseColor.x * 1.8f, 1.0f),
+                std::min(baseColor.y * 1.8f, 1.0f),
+                std::min(baseColor.z * 1.8f, 1.0f),
+                baseColor.w
+            ));
+            dl->AddRectFilledMultiColor(tabBB.Min, tabBB.Max, gradLeft, gradRight, gradRight, gradLeft);
         } else if (hovered) {
             dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 10), sizes.Rounding);
         }
@@ -1140,6 +1321,297 @@ bool HotkeyInput(const char* label, HotkeyBinding* binding) {
 }
 
 //-----------------------------------------------------------------------------
+// TextInput
+//-----------------------------------------------------------------------------
+
+bool TextInput(const char* label, char* buf, size_t bufSize, TextInputLabelMode labelMode, const char* placeholder) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float inputH = sizes.ButtonHeight;
+    float labelH = (labelMode == TextInputLabelMode::Above || labelMode == TextInputLabelMode::Below)
+                   ? ImGui::GetTextLineHeight() + 4.0f : 0.0f;
+    float totalH = inputH + labelH;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + totalH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Calculate positions based on label mode
+    float labelY = pos.y;
+    float inputY = pos.y;
+
+    if (labelMode == TextInputLabelMode::Above) {
+        inputY = pos.y + labelH;
+    } else if (labelMode == TextInputLabelMode::Below) {
+        labelY = pos.y + inputH + 4.0f;
+    }
+
+    ImRect inputBB(ImVec2(pos.x, inputY), ImVec2(pos.x + totalW, inputY + inputH));
+
+    // Focus handling
+    bool hovered = ImGui::IsMouseHoveringRect(inputBB.Min, inputBB.Max);
+    bool clicked = hovered && ImGui::IsMouseClicked(0);
+
+    static ImGuiID activeInputId = 0;
+    bool isFocused = (activeInputId == id);
+
+    if (clicked) {
+        activeInputId = id;
+        isFocused = true;
+    }
+
+    // Click outside to unfocus
+    if (isFocused && ImGui::IsMouseClicked(0) && !hovered) {
+        activeInputId = 0;
+        isFocused = false;
+    }
+
+    // Draw label (Above or Below mode)
+    if (labelMode == TextInputLabelMode::Above || labelMode == TextInputLabelMode::Below) {
+        dl->AddText(ImVec2(pos.x, labelY), ColorToU32(colors.Text), label);
+    }
+
+    // Input background
+    ImVec4 bgColor = isFocused ? colors.BackgroundAlt : colors.Background;
+    dl->AddRectFilled(inputBB.Min, inputBB.Max, ColorToU32(bgColor), sizes.Rounding);
+
+    // Border (highlight when focused)
+    ImU32 borderColor = isFocused ? ColorToU32(colors.Primary) :
+                        (hovered ? ColorToU32(colors.BorderHover) : ColorToU32(colors.Border));
+    dl->AddRect(inputBB.Min, inputBB.Max, borderColor, sizes.Rounding, 0, isFocused ? 2.0f : 1.0f);
+
+    // Text content area
+    float textPadding = sizes.FramePadding;
+    ImVec2 textPos(inputBB.Min.x + textPadding, inputBB.Min.y + (inputH - ImGui::GetTextLineHeight()) * 0.5f);
+
+    // Show placeholder or actual text
+    bool isEmpty = (buf[0] == '\0');
+
+    if (isEmpty && !isFocused) {
+        // Show placeholder
+        const char* placeholderText = (labelMode == TextInputLabelMode::Placeholder) ? label :
+                                      (placeholder ? placeholder : "");
+        if (placeholderText[0] != '\0') {
+            dl->AddText(textPos, ColorToU32(colors.TextDisabled), placeholderText);
+        }
+    } else {
+        // Show actual text
+        dl->AddText(textPos, ColorToU32(colors.Text), buf);
+    }
+
+    // Handle text input when focused
+    bool changed = false;
+    if (isFocused) {
+        // Draw cursor
+        float cursorX = textPos.x + ImGui::CalcTextSize(buf).x;
+        float cursorY1 = inputBB.Min.y + 6.0f;
+        float cursorY2 = inputBB.Max.y - 6.0f;
+
+        // Blinking cursor
+        if (fmodf((float)ImGui::GetTime(), 1.0f) < 0.5f) {
+            dl->AddLine(ImVec2(cursorX + 1, cursorY1), ImVec2(cursorX + 1, cursorY2),
+                       ColorToU32(colors.Text), 1.5f);
+        }
+
+        // Handle keyboard input
+        ImGuiIO& io = ImGui::GetIO();
+        for (int i = 0; i < io.InputQueueCharacters.Size; i++) {
+            unsigned int c = io.InputQueueCharacters[i];
+            if (c >= 32 && c < 127) { // Printable ASCII
+                size_t len = strlen(buf);
+                if (len + 1 < bufSize) {
+                    buf[len] = (char)c;
+                    buf[len + 1] = '\0';
+                    changed = true;
+                }
+            }
+        }
+
+        // Handle backspace
+        if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
+            size_t len = strlen(buf);
+            if (len > 0) {
+                buf[len - 1] = '\0';
+                changed = true;
+            }
+        }
+
+        // Handle escape to unfocus
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            activeInputId = 0;
+        }
+
+        // Handle enter to unfocus
+        if (ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+            activeInputId = 0;
+        }
+    }
+
+    return changed;
+}
+
+bool PasswordInput(const char* label, char* buf, size_t bufSize, TextInputLabelMode labelMode, const char* placeholder) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float inputH = sizes.ButtonHeight;
+    float labelH = (labelMode == TextInputLabelMode::Above || labelMode == TextInputLabelMode::Below)
+                   ? ImGui::GetTextLineHeight() + 4.0f : 0.0f;
+    float totalH = inputH + labelH;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + totalH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Calculate positions based on label mode
+    float labelY = pos.y;
+    float inputY = pos.y;
+
+    if (labelMode == TextInputLabelMode::Above) {
+        inputY = pos.y + labelH;
+    } else if (labelMode == TextInputLabelMode::Below) {
+        labelY = pos.y + inputH + 4.0f;
+    }
+
+    ImRect inputBB(ImVec2(pos.x, inputY), ImVec2(pos.x + totalW, inputY + inputH));
+
+    // Focus handling
+    bool hovered = ImGui::IsMouseHoveringRect(inputBB.Min, inputBB.Max);
+    bool clicked = hovered && ImGui::IsMouseClicked(0);
+
+    static ImGuiID activePasswordId = 0;
+    bool isFocused = (activePasswordId == id);
+
+    if (clicked) {
+        activePasswordId = id;
+        isFocused = true;
+    }
+
+    // Click outside to unfocus
+    if (isFocused && ImGui::IsMouseClicked(0) && !hovered) {
+        activePasswordId = 0;
+        isFocused = false;
+    }
+
+    // Draw label (Above or Below mode)
+    if (labelMode == TextInputLabelMode::Above || labelMode == TextInputLabelMode::Below) {
+        dl->AddText(ImVec2(pos.x, labelY), ColorToU32(colors.Text), label);
+    }
+
+    // Input background
+    ImVec4 bgColor = isFocused ? colors.BackgroundAlt : colors.Background;
+    dl->AddRectFilled(inputBB.Min, inputBB.Max, ColorToU32(bgColor), sizes.Rounding);
+
+    // Border (highlight when focused)
+    ImU32 borderColor = isFocused ? ColorToU32(colors.Primary) :
+                        (hovered ? ColorToU32(colors.BorderHover) : ColorToU32(colors.Border));
+    dl->AddRect(inputBB.Min, inputBB.Max, borderColor, sizes.Rounding, 0, isFocused ? 2.0f : 1.0f);
+
+    // Text content area
+    float textPadding = sizes.FramePadding;
+    ImVec2 textPos(inputBB.Min.x + textPadding, inputBB.Min.y + (inputH - ImGui::GetTextLineHeight()) * 0.5f);
+
+    // Show placeholder or masked text
+    bool isEmpty = (buf[0] == '\0');
+
+    if (isEmpty && !isFocused) {
+        // Show placeholder
+        const char* placeholderText = (labelMode == TextInputLabelMode::Placeholder) ? label :
+                                      (placeholder ? placeholder : "");
+        if (placeholderText[0] != '\0') {
+            dl->AddText(textPos, ColorToU32(colors.TextDisabled), placeholderText);
+        }
+    } else {
+        // Show masked text (dots)
+        size_t len = strlen(buf);
+        char masked[256];
+        size_t maskLen = std::min(len, sizeof(masked) - 1);
+        for (size_t i = 0; i < maskLen; i++) {
+            masked[i] = '*';
+        }
+        masked[maskLen] = '\0';
+        dl->AddText(textPos, ColorToU32(colors.Text), masked);
+    }
+
+    // Handle text input when focused
+    bool changed = false;
+    if (isFocused) {
+        // Draw cursor
+        size_t len = strlen(buf);
+        char masked[256];
+        size_t maskLen = std::min(len, sizeof(masked) - 1);
+        for (size_t i = 0; i < maskLen; i++) {
+            masked[i] = '*';
+        }
+        masked[maskLen] = '\0';
+
+        float cursorX = textPos.x + ImGui::CalcTextSize(masked).x;
+        float cursorY1 = inputBB.Min.y + 6.0f;
+        float cursorY2 = inputBB.Max.y - 6.0f;
+
+        // Blinking cursor
+        if (fmodf((float)ImGui::GetTime(), 1.0f) < 0.5f) {
+            dl->AddLine(ImVec2(cursorX + 1, cursorY1), ImVec2(cursorX + 1, cursorY2),
+                       ColorToU32(colors.Text), 1.5f);
+        }
+
+        // Handle keyboard input
+        ImGuiIO& io = ImGui::GetIO();
+        for (int i = 0; i < io.InputQueueCharacters.Size; i++) {
+            unsigned int c = io.InputQueueCharacters[i];
+            if (c >= 32 && c < 127) { // Printable ASCII
+                size_t len = strlen(buf);
+                if (len + 1 < bufSize) {
+                    buf[len] = (char)c;
+                    buf[len + 1] = '\0';
+                    changed = true;
+                }
+            }
+        }
+
+        // Handle backspace
+        if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
+            size_t len = strlen(buf);
+            if (len > 0) {
+                buf[len - 1] = '\0';
+                changed = true;
+            }
+        }
+
+        // Handle escape to unfocus
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            activePasswordId = 0;
+        }
+
+        // Handle enter to unfocus
+        if (ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+            activePasswordId = 0;
+        }
+    }
+
+    return changed;
+}
+
+//-----------------------------------------------------------------------------
 // Buttons
 //-----------------------------------------------------------------------------
 
@@ -1202,19 +1674,31 @@ bool ButtonGradient(const char* label, const ImVec2& size) {
 
     ImDrawList* dl = window->DrawList;
 
-    // Gradient background
-    ImVec4 topColor = held ? colors.PrimaryActive : (hovered ? colors.PrimaryHover : colors.Primary);
-    ImVec4 bottomColor = ImVec4(topColor.x * 0.7f, topColor.y * 0.7f, topColor.z * 0.7f, topColor.w);
+    // Horizontal gradient background (matching slider style: 0.7x to 1.8x brightness)
+    ImVec4 baseColor = held ? colors.PrimaryActive : (hovered ? colors.PrimaryHover : colors.Primary);
 
+    ImU32 gradLeft = ColorToU32(ImVec4(
+        baseColor.x * 0.7f,
+        baseColor.y * 0.7f,
+        baseColor.z * 0.7f,
+        baseColor.w
+    ));
+    ImU32 gradRight = ColorToU32(ImVec4(
+        std::min(baseColor.x * 1.8f, 1.0f),
+        std::min(baseColor.y * 1.8f, 1.0f),
+        std::min(baseColor.z * 1.8f, 1.0f),
+        baseColor.w
+    ));
+
+    // Draw gradient with rounding
+    dl->AddRectFilled(bb.Min, bb.Max, gradLeft, sizes.Rounding);
     dl->AddRectFilledMultiColor(
         bb.Min, bb.Max,
-        ColorToU32(topColor), ColorToU32(topColor),
-        ColorToU32(bottomColor), ColorToU32(bottomColor)
+        gradLeft, gradRight, gradRight, gradLeft
     );
 
-    // Rounded corners overlay (to fake rounded gradient)
-    // Draw corner masks
-    dl->AddRectFilled(bb.Min, bb.Max, IM_COL32(0, 0, 0, 0), sizes.Rounding);
+    // Re-draw with rounding to clip corners
+    dl->AddRect(bb.Min, bb.Max, IM_COL32(0, 0, 0, 0), sizes.Rounding);
 
     // Text
     ImVec2 textSize = ImGui::CalcTextSize(label);

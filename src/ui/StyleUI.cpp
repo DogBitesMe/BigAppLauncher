@@ -20,6 +20,11 @@ struct AnimState {
 static std::unordered_map<ImGuiID, AnimState> g_animations;
 static float g_deltaTime = 1.0f / 60.0f;
 
+// Glass effect state
+static ID3D11ShaderResourceView* g_blurredSRV = nullptr;
+static int g_screenWidth = 0;
+static int g_screenHeight = 0;
+
 //-----------------------------------------------------------------------------
 // Color Schemes
 //-----------------------------------------------------------------------------
@@ -241,6 +246,41 @@ float Animate(ImGuiID id, float target, float speed) {
     }
 
     return state.current;
+}
+
+float AnimateLinear(ImGuiID id, float target, float speed) {
+    auto& state = g_animations[id];
+
+    float diff = target - state.current;
+    float step = speed * g_deltaTime;
+
+    // Linear interpolation - no oscillation
+    if (std::abs(diff) <= step) {
+        state.current = target;
+    } else {
+        state.current += (diff > 0 ? step : -step);
+    }
+
+    state.velocity = 0.0f; // Not used in linear mode
+    return state.current;
+}
+
+//-----------------------------------------------------------------------------
+// Glass Effect System
+//-----------------------------------------------------------------------------
+
+void SetBlurredBackgroundSRV(ID3D11ShaderResourceView* srv, int screenWidth, int screenHeight) {
+    g_blurredSRV = srv;
+    g_screenWidth = screenWidth;
+    g_screenHeight = screenHeight;
+}
+
+ID3D11ShaderResourceView* GetBlurredBackgroundSRV() {
+    return g_blurredSRV;
+}
+
+bool IsGlassAvailable() {
+    return g_blurredSRV != nullptr && g_screenWidth > 0 && g_screenHeight > 0;
 }
 
 //-----------------------------------------------------------------------------

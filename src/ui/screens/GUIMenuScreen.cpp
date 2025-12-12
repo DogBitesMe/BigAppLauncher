@@ -81,10 +81,10 @@ void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
         ImGui::SetCursorPos(ImVec2(PADDING, HEADER_HEIGHT + 8));
         ImGui::PushItemWidth(windowSize.x - PADDING * 2);
 
-        const char* tabIcons[] = { ICON_FA_EYE, ICON_FA_BOX, ICON_FA_SATELLITE_DISH, ICON_FA_GUN, ICON_FA_GEAR };
-        const char* tabLabels[] = { "Visual", "Items", "Radar", "Weapon", "General" };
+        const char* tabIcons[] = { ICON_FA_EYE, ICON_FA_BOX, ICON_FA_SATELLITE_DISH, ICON_FA_GUN, ICON_FA_KEYBOARD, ICON_FA_GEAR };
+        const char* tabLabels[] = { "Visual", "Items", "Radar", "Weapon", "Input", "General" };
 
-        m_tabIndex = StyleUI::TabBarLarge("##MainTabs", tabIcons, tabLabels, 5, m_tabIndex);
+        m_tabIndex = StyleUI::TabBarLarge("##MainTabs", tabIcons, tabLabels, 6, m_tabIndex);
         m_currentTab = static_cast<Tab>(m_tabIndex);
 
         ImGui::PopItemWidth();
@@ -110,6 +110,9 @@ void GUIMenuScreen::Render(int windowWidth, int windowHeight) {
                 break;
             case Tab::Weapon:
                 RenderWeaponTab(windowSize.x - PADDING * 2, contentHeight);
+                break;
+            case Tab::Input:
+                RenderInputTab(windowSize.x - PADDING * 2, contentHeight);
                 break;
             case Tab::General:
                 RenderGeneralTab(windowSize.x - PADDING * 2, contentHeight);
@@ -314,6 +317,43 @@ void GUIMenuScreen::RenderWeaponTab(float width, float height) {
                 StyleUI::EndGroupBox();
             }
             break;
+    }
+}
+
+void GUIMenuScreen::RenderInputTab(float width, float height) {
+    // TextInput Demo GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_FONT, "TextInput Demos")) {
+        // Label Above (default)
+        StyleUI::TextInput("Label Above", m_textInputAbove, sizeof(m_textInputAbove),
+                          StyleUI::TextInputLabelMode::Above, "Enter text here...");
+
+        ImGui::Spacing();
+
+        // Label Below
+        StyleUI::TextInput("Label Below", m_textInputBelow, sizeof(m_textInputBelow),
+                          StyleUI::TextInputLabelMode::Below, "Enter text here...");
+
+        ImGui::Spacing();
+
+        // Placeholder Mode (label as placeholder)
+        StyleUI::TextInput("Enter your name...", m_textInputPlaceholder, sizeof(m_textInputPlaceholder),
+                          StyleUI::TextInputLabelMode::Placeholder);
+
+        ImGui::Spacing();
+
+        // Hidden label with custom placeholder
+        StyleUI::TextInput("##HiddenLabel", m_textInputHidden, sizeof(m_textInputHidden),
+                          StyleUI::TextInputLabelMode::Hidden, "Search...");
+
+        StyleUI::EndGroupBox();
+    }
+
+    // Password Demo GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_LOCK, "Password Input")) {
+        StyleUI::PasswordInput("Password", m_passwordInput, sizeof(m_passwordInput),
+                              StyleUI::TextInputLabelMode::Above, "Enter password...");
+
+        StyleUI::EndGroupBox();
     }
 }
 

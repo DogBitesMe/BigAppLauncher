@@ -4,6 +4,9 @@
 #include <string>
 #include <unordered_map>
 
+// Forward declarations for DirectX types
+struct ID3D11ShaderResourceView;
+
 namespace StyleUI {
 
 //-----------------------------------------------------------------------------
@@ -81,8 +84,41 @@ ColorScheme& GetColorScheme();
 SizeConfig& GetSizeConfig();
 
 // Animation helper
-float Animate(ImGuiID id, float target, float speed = 10.0f);
+float Animate(ImGuiID id, float target, float speed = 10.0f);         // Spring physics (can oscillate)
+float AnimateLinear(ImGuiID id, float target, float speed = 10.0f);   // Linear interpolation (smooth, no oscillation)
 void UpdateAnimations(float deltaTime);
+
+//-----------------------------------------------------------------------------
+// Glass Effect System
+//-----------------------------------------------------------------------------
+
+// Glass effect configuration
+struct GlassConfig {
+    float alpha = 0.7f;                           // Background transparency (0.0-1.0)
+    float rounding = 8.0f;                        // Corner rounding
+    ImU32 tintColor = IM_COL32(15, 15, 25, 160);  // Overlay tint color
+    ImU32 borderColor = IM_COL32(255, 255, 255, 30);  // Border glow color
+    float borderThickness = 1.5f;                 // Border thickness
+    bool drawBorder = true;                       // Whether to draw border
+};
+
+// Set the blurred background texture for glass effects
+// Call this every frame from Application before rendering UI
+void SetBlurredBackgroundSRV(ID3D11ShaderResourceView* srv, int screenWidth, int screenHeight);
+
+// Get the current blurred background texture (nullptr if not set)
+ID3D11ShaderResourceView* GetBlurredBackgroundSRV();
+
+// Check if glass effect is available (blurred texture is set)
+bool IsGlassAvailable();
+
+// Draw a glass-effect rectangle at the specified position
+// Uses the blurred background texture to create frosted glass appearance
+void DrawGlassRect(const ImVec2& pos, const ImVec2& size, const GlassConfig& config = GlassConfig());
+
+// Simplified version with common parameters
+void DrawGlassRectSimple(const ImVec2& pos, const ImVec2& size,
+                         float alpha = 0.7f, float rounding = 8.0f);
 
 //-----------------------------------------------------------------------------
 // Hotkey Binding
@@ -109,6 +145,12 @@ const char* GetHotkeyDisplayString(const HotkeyBinding& binding);
 bool BeginGroupBox(const char* label, const ImVec2& size = ImVec2(0, 0));
 void EndGroupBox();
 bool BeginGroupBoxEx(const char* icon, const char* label, const ImVec2& size = ImVec2(0, 0));
+
+// Glass GroupBox variants - Uses frosted glass effect for background
+// Requires SetBlurredBackgroundSRV to be called each frame
+bool BeginGroupBoxGlass(const char* label, const ImVec2& size = ImVec2(0, 0), const GlassConfig& config = GlassConfig());
+bool BeginGroupBoxExGlass(const char* icon, const char* label, const ImVec2& size = ImVec2(0, 0), const GlassConfig& config = GlassConfig());
+void EndGroupBoxGlass();
 
 // Toggle Switch - Mobile-style on/off switch (text left, switch right)
 bool ToggleSwitch(const char* label, bool* v);
@@ -166,6 +208,21 @@ int SubTabIcon(const char* id, const char** icons, const char** labels, int coun
 
 // Hotkey Input
 bool HotkeyInput(const char* label, HotkeyBinding* binding);
+
+// TextInput - Text input field with configurable label placement
+enum class TextInputLabelMode {
+    Above,      // Label above input field
+    Below,      // Label below input field
+    Hidden,     // No visible label (use for tooltip only)
+    Placeholder // Label as placeholder text inside input
+};
+
+bool TextInput(const char* label, char* buf, size_t bufSize,
+               TextInputLabelMode labelMode = TextInputLabelMode::Above,
+               const char* placeholder = nullptr);
+bool PasswordInput(const char* label, char* buf, size_t bufSize,
+                   TextInputLabelMode labelMode = TextInputLabelMode::Above,
+                   const char* placeholder = nullptr);
 
 // Buttons
 bool Button(const char* label, const ImVec2& size = ImVec2(0, 0));

@@ -1,6 +1,7 @@
 #include "LoginScreen.h"
 #include "../Theme.h"
 #include "../Widgets.h"
+#include "../StyleUI.h"
 #include "../../i18n/Localization.h"
 #include <imgui.h>
 
@@ -130,7 +131,7 @@ void LoginScreen::Render(int windowWidth, int windowHeight) {
             }
         }
 
-        int newTabIndex = Widgets::TabBar("LoginTabs", tabs, tabCount, tabIndex);
+        int newTabIndex = StyleUI::TabBarSmall("LoginTabs", tabs, tabCount, tabIndex);
 
         // Map back to Tab enum
         if (m_loginMode == LoginMode::CardKey) {
@@ -201,8 +202,8 @@ void LoginScreen::RenderCardKeyTab() {
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_cardkey"));
-    Widgets::InputText("##cardkey", m_cardKey, sizeof(m_cardKey), i18n::T("login.input_cardkey"));
+    StyleUI::TextInput(i18n::T("login.input_cardkey"), m_cardKey, sizeof(m_cardKey),
+                       StyleUI::TextInputLabelMode::Above, i18n::T("login.input_cardkey"));
 
     ImGui::Spacing();
     ImGui::Spacing();
@@ -216,7 +217,7 @@ void LoginScreen::RenderCardKeyTab() {
         ImGui::BeginDisabled();
     }
 
-    if (Widgets::GradientButton(i18n::T("login.btn_login"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
+    if (StyleUI::ButtonGradient(i18n::T("login.btn_login"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
         // Validate
         if (strlen(m_cardKey) == 0) {
             m_errorMessage = i18n::T("login.error_empty_cardkey");
@@ -233,18 +234,18 @@ void LoginScreen::RenderCardKeyTab() {
 void LoginScreen::RenderAccountTab() {
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_username"));
-    Widgets::InputText("##username", m_username, sizeof(m_username), i18n::T("login.input_username"));
+    StyleUI::TextInput(i18n::T("login.input_username"), m_username, sizeof(m_username),
+                       StyleUI::TextInputLabelMode::Above, i18n::T("login.input_username"));
 
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_password"));
-    Widgets::InputPassword("##password", m_password, sizeof(m_password), i18n::T("login.input_password"));
+    StyleUI::PasswordInput(i18n::T("login.input_password"), m_password, sizeof(m_password),
+                           StyleUI::TextInputLabelMode::Above, i18n::T("login.input_password"));
 
     ImGui::Spacing();
 
-    // Remember me checkbox
-    ImGui::Checkbox(i18n::T("login.remember_me"), &m_rememberMe);
+    // Remember me checkbox (classic style - checkbox on left)
+    StyleUI::CheckboxClassic(i18n::T("login.remember_me"), &m_rememberMe);
 
     ImGui::SameLine();
     ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - 80);
@@ -263,7 +264,7 @@ void LoginScreen::RenderAccountTab() {
         ImGui::BeginDisabled();
     }
 
-    if (Widgets::GradientButton(i18n::T("login.btn_login"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
+    if (StyleUI::ButtonGradient(i18n::T("login.btn_login"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
         if (strlen(m_username) == 0) {
             m_errorMessage = i18n::T("login.error_empty_username");
         } else if (strlen(m_password) == 0) {
@@ -281,30 +282,30 @@ void LoginScreen::RenderAccountTab() {
 void LoginScreen::RenderRegisterTab() {
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_username"));
-    Widgets::InputText("##reg_username", m_username, sizeof(m_username), i18n::T("login.input_username"));
+    StyleUI::TextInput(i18n::T("login.input_username"), m_username, sizeof(m_username),
+                       StyleUI::TextInputLabelMode::Above, i18n::T("login.input_username"));
 
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_email"));
-    Widgets::InputText("##reg_email", m_email, sizeof(m_email), i18n::T("login.input_email"));
+    StyleUI::TextInput(i18n::T("login.input_email"), m_email, sizeof(m_email),
+                       StyleUI::TextInputLabelMode::Above, i18n::T("login.input_email"));
 
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_password"));
-    Widgets::InputPassword("##reg_password", m_password, sizeof(m_password), i18n::T("login.input_password"));
+    StyleUI::PasswordInput(i18n::T("login.input_password"), m_password, sizeof(m_password),
+                           StyleUI::TextInputLabelMode::Above, i18n::T("login.input_password"));
 
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_confirm_password"));
-    Widgets::InputPassword("##reg_confirm", m_confirmPassword, sizeof(m_confirmPassword), i18n::T("login.input_confirm_password"));
+    StyleUI::PasswordInput(i18n::T("login.input_confirm_password"), m_confirmPassword, sizeof(m_confirmPassword),
+                           StyleUI::TextInputLabelMode::Above, i18n::T("login.input_confirm_password"));
 
     ImGui::Spacing();
     ImGui::Spacing();
 
     // Register button
     float buttonWidth = ImGui::GetContentRegionAvail().x;
-    if (Widgets::GradientButton(i18n::T("login.btn_register"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
+    if (StyleUI::ButtonGradient(i18n::T("login.btn_register"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
         if (strlen(m_username) == 0) {
             m_errorMessage = i18n::T("login.error_empty_username");
         } else if (strlen(m_password) == 0) {
@@ -322,25 +323,25 @@ void LoginScreen::RenderPasswordTab() {
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_old_password"));
-    Widgets::InputPassword("##old_password", m_oldPassword, sizeof(m_oldPassword), i18n::T("login.input_old_password"));
+    StyleUI::PasswordInput(i18n::T("login.input_old_password"), m_oldPassword, sizeof(m_oldPassword),
+                           StyleUI::TextInputLabelMode::Above, i18n::T("login.input_old_password"));
 
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_new_password"));
-    Widgets::InputPassword("##new_password", m_newPassword, sizeof(m_newPassword), i18n::T("login.input_new_password"));
+    StyleUI::PasswordInput(i18n::T("login.input_new_password"), m_newPassword, sizeof(m_newPassword),
+                           StyleUI::TextInputLabelMode::Above, i18n::T("login.input_new_password"));
 
     ImGui::Spacing();
 
-    ImGui::Text("%s", i18n::T("login.input_confirm_password"));
-    Widgets::InputPassword("##confirm_new", m_confirmPassword, sizeof(m_confirmPassword), i18n::T("login.input_confirm_password"));
+    StyleUI::PasswordInput(i18n::T("login.input_confirm_password"), m_confirmPassword, sizeof(m_confirmPassword),
+                           StyleUI::TextInputLabelMode::Above, i18n::T("login.input_confirm_password"));
 
     ImGui::Spacing();
     ImGui::Spacing();
 
     // Change password button
     float buttonWidth = ImGui::GetContentRegionAvail().x;
-    if (Widgets::GradientButton(i18n::T("login.btn_change_password"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
+    if (StyleUI::ButtonGradient(i18n::T("login.btn_change_password"), ImVec2(buttonWidth, Theme::Size::ButtonHeight))) {
         if (strlen(m_oldPassword) == 0 || strlen(m_newPassword) == 0) {
             m_errorMessage = i18n::T("login.error_empty_password");
         } else if (strcmp(m_newPassword, m_confirmPassword) != 0) {

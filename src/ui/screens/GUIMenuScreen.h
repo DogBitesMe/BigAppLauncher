@@ -26,6 +26,7 @@ private:
         Items,
         Radar,
         Weapon,
+        Input,
         General
     };
     Tab m_currentTab = Tab::Visual;
@@ -36,7 +37,15 @@ private:
     void RenderItemsTab(float width, float height);
     void RenderRadarTab(float width, float height);
     void RenderWeaponTab(float width, float height);
+    void RenderInputTab(float width, float height);
     void RenderGeneralTab(float width, float height);
+
+    // Input tab demo state
+    char m_textInputAbove[128] = "";
+    char m_textInputBelow[128] = "";
+    char m_textInputPlaceholder[128] = "";
+    char m_textInputHidden[128] = "";
+    char m_passwordInput[64] = "";
 
     // Weapon tab sub-tabs
     int m_weaponSubTabIndex = 0;

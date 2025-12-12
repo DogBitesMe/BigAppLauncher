@@ -2,6 +2,7 @@
 #include "ui/Theme.h"
 #include "ui/IconsFontAwesome6.h"
 #include "ui/DebugController.h"
+#include "ui/StyleUI.h"
 #include "i18n/Localization.h"
 
 #include <imgui.h>
@@ -258,6 +259,9 @@ void Application::RenderBlurredPanelBackground(float x, float y, float width, fl
     // Reset render target after blur effect (it changes the render target)
     ID3D11RenderTargetView* rtv = m_dx11->GetRenderTargetView();
     m_dx11->GetContext()->OMSetRenderTargets(1, &rtv, nullptr);
+
+    // Make blurred texture available to StyleUI for glass effects
+    StyleUI::SetBlurredBackgroundSRV(blurredSRV, m_width, m_height);
 
     // Calculate UV coordinates for the panel region (based on video aspect ratio)
     float videoAspect = (float)m_videoPlayer->GetWidth() / (float)m_videoPlayer->GetHeight();
