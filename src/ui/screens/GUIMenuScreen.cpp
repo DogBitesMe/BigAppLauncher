@@ -358,6 +358,40 @@ void GUIMenuScreen::RenderInputTab(float width, float height) {
 }
 
 void GUIMenuScreen::RenderGeneralTab(float width, float height) {
+    // Tab Overflow Demo GroupBox
+    if (StyleUI::BeginGroupBoxEx(ICON_FA_LAYER_GROUP, "Tab Overflow Demo")) {
+        // Large Tab with scrolling
+        ImGui::Text("Large Tab (Scrollable):");
+        const char* scrollIcons[] = { ICON_FA_HOUSE, ICON_FA_USER, ICON_FA_GEAR, ICON_FA_BELL, ICON_FA_STAR, ICON_FA_HEART, ICON_FA_FLAG, ICON_FA_BOOKMARK };
+        const char* scrollLabels[] = { "Home", "User", "Settings", "Alerts", "Favorites", "Likes", "Flags", "Saved" };
+
+        StyleUI::TabStyle scrollStyle;
+        scrollStyle.scrollable = true;
+        scrollStyle.minTabWidth = 80.0f;
+        scrollStyle.scrollArrowWidth = 28.0f;
+
+        static int scrollTabIndex = 0;
+        scrollTabIndex = StyleUI::TabBarLargeEx("##ScrollDemo", scrollIcons, scrollLabels, 8, scrollTabIndex, scrollStyle);
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Small Tab with wrapping
+        ImGui::Text("Small Tab (Wrapping):");
+        const char* wrapLabels[] = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+
+        StyleUI::SmallTabStyle wrapStyle;
+        wrapStyle.allowWrap = true;
+        wrapStyle.tabPadding = 12.0f;
+        wrapStyle.tabSpacing = 6.0f;
+        wrapStyle.rowSpacing = 4.0f;
+
+        static int wrapTabIndex = 0;
+        wrapTabIndex = StyleUI::TabBarSmallEx("##WrapDemo", wrapLabels, 7, wrapTabIndex, wrapStyle);
+
+        StyleUI::EndGroupBox();
+    }
+
     // Aim Assist GroupBox
     if (StyleUI::BeginGroupBoxEx(ICON_FA_CROSSHAIRS, "Aim Assist")) {
         StyleUI::ToggleSwitch("Enable Aim Assist", &m_autoAim);

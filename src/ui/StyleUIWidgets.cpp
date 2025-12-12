@@ -106,7 +106,6 @@ bool BeginGroupBox(const char* label, const ImVec2& size) {
 
 bool BeginGroupBoxEx(const char* icon, const char* label, const ImVec2& size) {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
-    if (window->SkipItems) return false;
 
     const auto& colors = GetColorScheme();
     const auto& sizes = GetSizeConfig();
@@ -119,7 +118,7 @@ bool BeginGroupBoxEx(const char* icon, const char* label, const ImVec2& size) {
     if (contentSize.x <= 0) contentSize.x = ImGui::GetContentRegionAvail().x;
     if (contentSize.y <= 0) contentSize.y = 0; // Will auto-resize
 
-    // Store for EndGroupBox
+    // Store for EndGroupBox - always increment so EndGroupBox knows to cleanup
     g_groupBoxDepth++;
 
     ImGui::PushID(id);
@@ -129,7 +128,13 @@ bool BeginGroupBoxEx(const char* icon, const char* label, const ImVec2& size) {
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, sizes.Rounding);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(sizes.FramePadding, sizes.FramePadding));
 
-    bool opened = ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+    // BeginChild always needs EndChild, regardless of return value
+    ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+
+    // Check if we should skip drawing
+    if (window->SkipItems) {
+        return true; // Still return true so EndGroupBox gets called
+    }
 
     // Draw header background
     ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -168,7 +173,7 @@ bool BeginGroupBoxEx(const char* icon, const char* label, const ImVec2& size) {
     // Move cursor below header
     ImGui::SetCursorPosY(sizes.GroupBoxHeaderHeight + sizes.FramePadding);
 
-    return opened;
+    return true;
 }
 
 void EndGroupBox() {
@@ -196,7 +201,6 @@ bool BeginGroupBoxGlass(const char* label, const ImVec2& size, const GlassConfig
 
 bool BeginGroupBoxExGlass(const char* icon, const char* label, const ImVec2& size, const GlassConfig& config) {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
-    if (window->SkipItems) return false;
 
     const auto& colors = GetColorScheme();
     const auto& sizes = GetSizeConfig();
@@ -209,7 +213,7 @@ bool BeginGroupBoxExGlass(const char* icon, const char* label, const ImVec2& siz
     if (contentSize.x <= 0) contentSize.x = ImGui::GetContentRegionAvail().x;
     if (contentSize.y <= 0) contentSize.y = 0; // Will auto-resize
 
-    // Store for EndGroupBoxGlass
+    // Store for EndGroupBoxGlass - always increment
     g_glassGroupBoxDepth++;
     g_currentGlassConfig = config;
 
@@ -220,7 +224,12 @@ bool BeginGroupBoxExGlass(const char* icon, const char* label, const ImVec2& siz
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, config.rounding);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(sizes.FramePadding, sizes.FramePadding));
 
-    bool opened = ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+    ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+
+    // Check if we should skip drawing
+    if (window->SkipItems) {
+        return true; // Still return true so EndGroupBoxGlass gets called
+    }
 
     // Get actual window position and size for glass effect
     ImVec2 windowPos = ImGui::GetWindowPos();
@@ -267,7 +276,7 @@ bool BeginGroupBoxExGlass(const char* icon, const char* label, const ImVec2& siz
     // Move cursor below header
     ImGui::SetCursorPosY(sizes.GroupBoxHeaderHeight + sizes.FramePadding);
 
-    return opened;
+    return true;
 }
 
 void EndGroupBoxGlass() {
@@ -674,7 +683,40 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
     ImVec2 pos = window->DC.CursorPos;
     float totalW = ImGui::GetContentRegionAvail().x;
     float tabH = sizes.TabLargeHeight;
-    float tabW = totalW / count;
+
+    // Calculate if scrolling is needed
+    float requiredWidth = count * style.minTabWidth;
+    bool needsScroll = style.scrollable && (requiredWidth > totalW);
+
+    // Track scroll state using ImGui storage
+    float* scrollOffset = nullptr;
+    if (needsScroll) {
+        ImGuiID scrollId = window->GetID("##tabscroll");
+        scrollOffset = ImGui::GetStateStorage()->GetFloatRef(scrollId, 0.0f);
+    }
+
+    // Calculate visible area and tab width
+    float arrowW = style.scrollArrowWidth;
+    float visibleW = needsScroll ? (totalW - arrowW * 2) : totalW;
+    float tabW = needsScroll ? style.minTabWidth : (totalW / count);
+    float contentW = count * tabW;
+
+    // Clamp scroll offset
+    if (scrollOffset) {
+        float maxScroll = std::max(0.0f, contentW - visibleW);
+        *scrollOffset = std::clamp(*scrollOffset, 0.0f, maxScroll);
+
+        // Auto-scroll to show active tab
+        float activeTabLeft = current * tabW;
+        float activeTabRight = activeTabLeft + tabW;
+        float scrollOff = *scrollOffset;
+
+        if (activeTabLeft < scrollOff) {
+            *scrollOffset = activeTabLeft;  // Scroll left to show active tab
+        } else if (activeTabRight > scrollOff + visibleW) {
+            *scrollOffset = activeTabRight - visibleW;  // Scroll right to show active tab
+        }
+    }
 
     ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + tabH));
     ImGui::ItemSize(bb);
@@ -687,14 +729,100 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
 
     int result = current;
 
+    // Draw left scroll arrow
+    float contentStartX = pos.x;
+    if (needsScroll) {
+        bool canScrollLeft = scrollOffset && *scrollOffset > 0.1f;
+        ImVec2 arrowPos = pos;
+        ImRect arrowBB(arrowPos, ImVec2(arrowPos.x + arrowW, arrowPos.y + tabH));
+
+        // Draw arrow background
+        ImU32 arrowBgColor = canScrollLeft ? ColorToU32(colors.BackgroundAlt) : IM_COL32(60, 60, 70, 200);
+        dl->AddRectFilled(arrowBB.Min, arrowBB.Max, arrowBgColor, sizes.Rounding, ImDrawFlags_RoundCornersLeft);
+
+        // Draw arrow icon (FontAwesome: chevron-left U+F053)
+        const char* leftArrow = "\xef\x81\x93";
+        ImVec2 arrowSize = ImGui::CalcTextSize(leftArrow);
+        ImVec2 arrowTextPos(arrowPos.x + (arrowW - arrowSize.x) * 0.5f,
+                           arrowPos.y + (tabH - arrowSize.y) * 0.5f);
+        dl->AddText(arrowTextPos, canScrollLeft ? ColorToU32(colors.Text) : ColorToU32(colors.TextDisabled), leftArrow);
+
+        // Handle click
+        bool arrowHovered = ImGui::IsMouseHoveringRect(arrowBB.Min, arrowBB.Max);
+        if (canScrollLeft && arrowHovered && ImGui::IsMouseClicked(0)) {
+            *scrollOffset -= tabW;
+        }
+
+        // Hover effect
+        if (canScrollLeft && arrowHovered) {
+            dl->AddRectFilled(arrowBB.Min, arrowBB.Max, IM_COL32(255, 255, 255, 15), sizes.Rounding, ImDrawFlags_RoundCornersLeft);
+        }
+
+        contentStartX = pos.x + arrowW;
+    }
+
+    // Draw right scroll arrow
+    float contentEndX = pos.x + totalW;
+    if (needsScroll) {
+        float maxScroll = contentW - visibleW;
+        bool canScrollRight = scrollOffset && (*scrollOffset < maxScroll - 0.1f);
+        ImVec2 arrowPos(pos.x + totalW - arrowW, pos.y);
+        ImRect arrowBB(arrowPos, ImVec2(arrowPos.x + arrowW, arrowPos.y + tabH));
+
+        ImU32 arrowBgColor = canScrollRight ? ColorToU32(colors.BackgroundAlt) : IM_COL32(60, 60, 70, 200);
+        dl->AddRectFilled(arrowBB.Min, arrowBB.Max, arrowBgColor, sizes.Rounding, ImDrawFlags_RoundCornersRight);
+
+        // Draw arrow icon (FontAwesome: chevron-right U+F054)
+        const char* rightArrow = "\xef\x81\x94";
+        ImVec2 arrowSize = ImGui::CalcTextSize(rightArrow);
+        ImVec2 arrowTextPos(arrowPos.x + (arrowW - arrowSize.x) * 0.5f,
+                           arrowPos.y + (tabH - arrowSize.y) * 0.5f);
+        dl->AddText(arrowTextPos, canScrollRight ? ColorToU32(colors.Text) : ColorToU32(colors.TextDisabled), rightArrow);
+
+        // Handle click
+        bool arrowHovered = ImGui::IsMouseHoveringRect(arrowBB.Min, arrowBB.Max);
+        if (canScrollRight && arrowHovered && ImGui::IsMouseClicked(0)) {
+            *scrollOffset += tabW;
+        }
+
+        // Hover effect
+        if (canScrollRight && arrowHovered) {
+            dl->AddRectFilled(arrowBB.Min, arrowBB.Max, IM_COL32(255, 255, 255, 15), sizes.Rounding, ImDrawFlags_RoundCornersRight);
+        }
+
+        contentEndX = pos.x + totalW - arrowW;
+    }
+
+    // Push clip rect for tabs (if scrolling)
+    if (needsScroll) {
+        dl->PushClipRect(ImVec2(contentStartX, pos.y), ImVec2(contentEndX, pos.y + tabH), true);
+    }
+
+    // Draw tabs (with scroll offset applied)
+    float scrollOff = scrollOffset ? *scrollOffset : 0.0f;
+
     for (int i = 0; i < count; i++) {
-        ImVec2 tabPos(pos.x + i * tabW, pos.y);
+        float tabX = contentStartX + i * tabW - scrollOff;
+        ImVec2 tabPos(tabX, pos.y);
         ImRect tabBB(tabPos, ImVec2(tabPos.x + tabW, tabPos.y + tabH));
+
+        // Skip tabs that are completely outside visible area (optimization)
+        if (needsScroll && (tabBB.Max.x < contentStartX || tabBB.Min.x > contentEndX)) {
+            continue;
+        }
 
         ImGuiID itemId = tabId + i + 1;
         (void)itemId; // Unused but kept for consistency
         bool isActive = (i == current);
-        bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
+
+        // For hover detection, clip to visible area
+        ImVec2 hoverMin = tabBB.Min;
+        ImVec2 hoverMax = tabBB.Max;
+        if (needsScroll) {
+            hoverMin.x = std::max(hoverMin.x, contentStartX);
+            hoverMax.x = std::min(hoverMax.x, contentEndX);
+        }
+        bool hovered = (hoverMax.x > hoverMin.x) && ImGui::IsMouseHoveringRect(hoverMin, hoverMax);
 
         // Tab background for active tab
         if (isActive) {
@@ -777,6 +905,11 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
         if (hovered && ImGui::IsMouseClicked(0)) {
             result = i;
         }
+    }
+
+    // Pop clip rect
+    if (needsScroll) {
+        dl->PopClipRect();
     }
 
     return result;
