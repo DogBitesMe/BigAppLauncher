@@ -4,6 +4,8 @@
 #include <imgui_internal.h>
 #include <algorithm>
 #include <cstring>
+#include <vector>
+#include "../i18n/Localization.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -694,20 +696,27 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
         bool isActive = (i == current);
         bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
 
-        // Tab background with gradient for active tab
+        // Tab background for active tab
         if (isActive) {
-            // Gradient background matching slider/button style (0.7x to 1.8x)
-            ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
-            ImU32 gradLeft = ColorToU32(ImVec4(
-                baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
-            ));
-            ImU32 gradRight = ColorToU32(ImVec4(
-                std::min(baseColor.x * 1.8f, 1.0f),
-                std::min(baseColor.y * 1.8f, 1.0f),
-                std::min(baseColor.z * 1.8f, 1.0f),
-                baseColor.w
-            ));
-            dl->AddRectFilledMultiColor(tabBB.Min, tabBB.Max, gradLeft, gradRight, gradRight, gradLeft);
+            if (style.useGradient) {
+                // Gradient background matching slider/button style (0.7x to 1.8x)
+                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+                ImU32 gradLeft = ColorToU32(ImVec4(
+                    baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
+                ));
+                ImU32 gradRight = ColorToU32(ImVec4(
+                    std::min(baseColor.x * 1.8f, 1.0f),
+                    std::min(baseColor.y * 1.8f, 1.0f),
+                    std::min(baseColor.z * 1.8f, 1.0f),
+                    baseColor.w
+                ));
+                dl->AddRectFilledMultiColor(tabBB.Min, tabBB.Max, gradLeft, gradRight, gradRight, gradLeft);
+            } else {
+                // Solid color background (like SubTab Pill style)
+                dl->AddRectFilled(tabBB.Min, tabBB.Max,
+                    ColorToU32(ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f)),
+                    sizes.Rounding);
+            }
         } else if (hovered) {
             dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 10), sizes.Rounding);
         }
@@ -854,6 +863,201 @@ int TabBarSmallIcon(const char* id, const char** icons, const char** labels, int
 
         if (hovered && ImGui::IsMouseClicked(0)) {
             result = i;
+        }
+    }
+
+    return result;
+}
+
+int TabBarSmallEx(const char* id, const char** labels, int count, int current, const SmallTabStyle& style) {
+    return TabBarSmallIconEx(id, nullptr, labels, count, current, style);
+}
+
+int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, int count, int current, const SmallTabStyle& style) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return current;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID tabId = window->GetID(id);
+    ImVec2 pos = window->DC.CursorPos;
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float tabH = sizes.TabSmallHeight;
+
+    ImDrawList* dl = window->DrawList;
+    int result = current;
+
+    if (style.allowWrap) {
+        // Calculate tab widths and determine row assignments
+        std::vector<float> tabWidths(count);
+        std::vector<int> tabRows(count);
+        float currentRowWidth = 0;
+        int currentRow = 0;
+
+        for (int i = 0; i < count; i++) {
+            // Build label text
+            char fullText[128];
+            if (icons && icons[i] && labels && labels[i]) {
+                snprintf(fullText, sizeof(fullText), "%s %s", icons[i], labels[i]);
+            } else if (labels && labels[i]) {
+                snprintf(fullText, sizeof(fullText), "%s", labels[i]);
+            } else {
+                fullText[0] = '\0';
+            }
+
+            ImVec2 textSize = ImGui::CalcTextSize(fullText);
+            float tabW = textSize.x + style.tabPadding * 2;
+            tabWidths[i] = tabW;
+
+            if (currentRowWidth > 0 && currentRowWidth + tabW + style.tabSpacing > totalW) {
+                // Start new row
+                currentRow++;
+                currentRowWidth = 0;
+            }
+
+            tabRows[i] = currentRow;
+            currentRowWidth += tabW + style.tabSpacing;
+        }
+
+        int rowCount = currentRow + 1;
+        float totalHeight = rowCount * tabH + (rowCount - 1) * style.rowSpacing;
+
+        ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + totalHeight));
+        ImGui::ItemSize(bb);
+        if (!ImGui::ItemAdd(bb, tabId)) return current;
+
+        // Background
+        dl->AddRectFilled(pos, ImVec2(pos.x + totalW, pos.y + totalHeight), ColorToU32(colors.BackgroundAlt), sizes.Rounding);
+
+        // Render tabs
+        std::vector<float> rowXOffsets(rowCount, 0.0f);
+
+        for (int i = 0; i < count; i++) {
+            int row = tabRows[i];
+            float tabW = tabWidths[i];
+            float tabY = pos.y + row * (tabH + style.rowSpacing);
+            float tabX = pos.x + rowXOffsets[row];
+
+            ImVec2 tabPos(tabX, tabY);
+            ImRect tabBB(tabPos, ImVec2(tabPos.x + tabW, tabPos.y + tabH));
+
+            bool isActive = (i == current);
+            bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
+
+            // Tab background
+            if (isActive) {
+                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+                ImU32 gradLeft = ColorToU32(ImVec4(
+                    baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
+                ));
+                ImU32 gradRight = ColorToU32(ImVec4(
+                    std::min(baseColor.x * 1.8f, 1.0f),
+                    std::min(baseColor.y * 1.8f, 1.0f),
+                    std::min(baseColor.z * 1.8f, 1.0f),
+                    baseColor.w
+                ));
+                dl->AddRectFilledMultiColor(tabBB.Min, tabBB.Max, gradLeft, gradRight, gradRight, gradLeft);
+            } else if (hovered) {
+                dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 10), sizes.Rounding);
+            }
+
+            // Underline indicator
+            if (isActive) {
+                dl->AddRectFilled(
+                    ImVec2(tabBB.Min.x + 2, tabBB.Max.y - 2),
+                    ImVec2(tabBB.Max.x - 2, tabBB.Max.y),
+                    ColorToU32(colors.Primary)
+                );
+            }
+
+            // Build label text
+            char fullText[128];
+            if (icons && icons[i] && labels && labels[i]) {
+                snprintf(fullText, sizeof(fullText), "%s %s", icons[i], labels[i]);
+            } else if (labels && labels[i]) {
+                snprintf(fullText, sizeof(fullText), "%s", labels[i]);
+            } else {
+                fullText[0] = '\0';
+            }
+
+            ImVec2 textSize = ImGui::CalcTextSize(fullText);
+            float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
+            float textY = tabPos.y + (tabH - textSize.y) * 0.5f;
+
+            ImU32 textColor = isActive ? ColorToU32(colors.Primary) : ColorToU32(colors.TextSecondary);
+            dl->AddText(ImVec2(textX, textY), textColor, fullText);
+
+            if (hovered && ImGui::IsMouseClicked(0)) {
+                result = i;
+            }
+
+            rowXOffsets[row] += tabW + style.tabSpacing;
+        }
+    } else {
+        // Non-wrapping mode (same as original TabBarSmallIcon)
+        float tabW = totalW / count;
+
+        ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + tabH));
+        ImGui::ItemSize(bb);
+        if (!ImGui::ItemAdd(bb, tabId)) return current;
+
+        // Background
+        dl->AddRectFilled(pos, ImVec2(pos.x + totalW, pos.y + tabH), ColorToU32(colors.BackgroundAlt), sizes.Rounding);
+
+        for (int i = 0; i < count; i++) {
+            ImVec2 tabPos(pos.x + i * tabW, pos.y);
+            ImRect tabBB(tabPos, ImVec2(tabPos.x + tabW, tabPos.y + tabH));
+
+            bool isActive = (i == current);
+            bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
+
+            // Tab background
+            if (isActive) {
+                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+                ImU32 gradLeft = ColorToU32(ImVec4(
+                    baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
+                ));
+                ImU32 gradRight = ColorToU32(ImVec4(
+                    std::min(baseColor.x * 1.8f, 1.0f),
+                    std::min(baseColor.y * 1.8f, 1.0f),
+                    std::min(baseColor.z * 1.8f, 1.0f),
+                    baseColor.w
+                ));
+                dl->AddRectFilledMultiColor(tabBB.Min, tabBB.Max, gradLeft, gradRight, gradRight, gradLeft);
+            } else if (hovered) {
+                dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 10), sizes.Rounding);
+            }
+
+            // Underline indicator
+            if (isActive) {
+                dl->AddRectFilled(
+                    ImVec2(tabBB.Min.x + 2, tabBB.Max.y - 2),
+                    ImVec2(tabBB.Max.x - 2, tabBB.Max.y),
+                    ColorToU32(colors.Primary)
+                );
+            }
+
+            // Build label text
+            char fullText[128];
+            if (icons && icons[i] && labels && labels[i]) {
+                snprintf(fullText, sizeof(fullText), "%s %s", icons[i], labels[i]);
+            } else if (labels && labels[i]) {
+                snprintf(fullText, sizeof(fullText), "%s", labels[i]);
+            } else {
+                fullText[0] = '\0';
+            }
+
+            ImVec2 textSize = ImGui::CalcTextSize(fullText);
+            float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
+            float textY = tabPos.y + (tabH - textSize.y) * 0.5f;
+
+            ImU32 textColor = isActive ? ColorToU32(colors.Primary) : ColorToU32(colors.TextSecondary);
+            dl->AddText(ImVec2(textX, textY), textColor, fullText);
+
+            if (hovered && ImGui::IsMouseClicked(0)) {
+                result = i;
+            }
         }
     }
 
@@ -1138,8 +1342,25 @@ int SubTabIcon(const char* id, const char** icons, const char** labels, int coun
             fullText[0] = '\0';
         }
 
-        if (style == SubTabStyle::Pill) {
-            // Pill style - rounded background for active/hovered
+        if (style == SubTabStyle::Gradient) {
+            // Gradient style - like Tab with gradient background
+            if (isActive) {
+                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+                ImU32 gradLeft = ColorToU32(ImVec4(
+                    baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
+                ));
+                ImU32 gradRight = ColorToU32(ImVec4(
+                    std::min(baseColor.x * 1.8f, 1.0f),
+                    std::min(baseColor.y * 1.8f, 1.0f),
+                    std::min(baseColor.z * 1.8f, 1.0f),
+                    baseColor.w
+                ));
+                dl->AddRectFilledMultiColor(tabBB.Min, tabBB.Max, gradLeft, gradRight, gradRight, gradLeft);
+            } else if (hovered) {
+                dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 15), height * 0.5f);
+            }
+        } else if (style == SubTabStyle::Pill) {
+            // Pill style - rounded background for active/hovered (solid color)
             if (isActive) {
                 dl->AddRectFilled(tabBB.Min, tabBB.Max,
                     ColorToU32(ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f)),
@@ -1838,6 +2059,95 @@ bool ComboEx(const char* label, int* current, const char** items, int count, flo
             bool isSelected = (i == *current);
             if (ImGui::Selectable(items[i], isSelected)) {
                 *current = i;
+                changed = true;
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndPopup();
+    }
+
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+    ImGui::PopID();
+
+    return changed;
+}
+
+bool LanguageCombo(const char* label, std::string& currentLang, float width) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    // Get available languages from i18n system
+    const auto& languages = i18n::Localization::Instance().GetAvailableLanguages();
+    if (languages.empty()) return false;
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float comboW = width > 0 ? width : 100.0f;
+    float rowH = sizes.ButtonHeight;
+
+    ImRect bb(pos, ImVec2(pos.x + comboW, pos.y + rowH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    ImDrawList* dl = window->DrawList;
+    bool changed = false;
+
+    // Find current language display name
+    const char* currentDisplay = currentLang.c_str();
+    int currentIndex = -1;
+    for (size_t i = 0; i < languages.size(); i++) {
+        if (languages[i].code == currentLang) {
+            currentDisplay = languages[i].nativeName.c_str();
+            currentIndex = (int)i;
+            break;
+        }
+    }
+
+    bool hovered = ImGui::IsMouseHoveringRect(bb.Min, bb.Max);
+
+    // Background
+    dl->AddRectFilled(bb.Min, bb.Max, ColorToU32(hovered ? colors.BorderHover : colors.Border), sizes.Rounding);
+
+    // Current item text
+    ImVec2 previewSize = ImGui::CalcTextSize(currentDisplay);
+    float previewX = pos.x + sizes.FramePadding;
+    float previewY = pos.y + (rowH - previewSize.y) * 0.5f;
+    dl->AddText(ImVec2(previewX, previewY), ColorToU32(colors.Text), currentDisplay);
+
+    // Arrow indicator
+    float arrowX = pos.x + comboW - 20;
+    float arrowY = pos.y + rowH * 0.5f;
+    dl->AddTriangleFilled(
+        ImVec2(arrowX, arrowY - 3),
+        ImVec2(arrowX + 8, arrowY - 3),
+        ImVec2(arrowX + 4, arrowY + 3),
+        ColorToU32(colors.TextSecondary)
+    );
+
+    // Handle click to open popup
+    ImGui::PushID(id);
+    if (hovered && ImGui::IsMouseClicked(0)) {
+        ImGui::OpenPopup("##LangComboPopup");
+    }
+
+    // Popup
+    ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y + rowH));
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, colors.BackgroundAlt);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+    ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding, sizes.Rounding);
+
+    if (ImGui::BeginPopup("##LangComboPopup")) {
+        for (size_t i = 0; i < languages.size(); i++) {
+            bool isSelected = ((int)i == currentIndex);
+            if (ImGui::Selectable(languages[i].nativeName.c_str(), isSelected)) {
+                currentLang = languages[i].code;
                 changed = true;
             }
             if (isSelected) {

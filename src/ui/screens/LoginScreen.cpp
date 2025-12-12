@@ -82,12 +82,10 @@ void LoginScreen::Render(int windowWidth, int windowHeight) {
 
     if (ImGui::Begin("LoginPanel", nullptr, windowFlags)) {
         // Language selector at top right
-        ImGui::SetCursorPos(ImVec2(panelWidth - 105, 10));
-        ImGui::PushItemWidth(95);
-        if (Widgets::LanguageSelector("##lang", m_currentLanguage)) {
+        ImGui::SetCursorPos(ImVec2(panelWidth - 110, 10));
+        if (StyleUI::LanguageCombo("##lang", m_currentLanguage, 100.0f)) {
             i18n::SetLanguage(m_currentLanguage);
         }
-        ImGui::PopItemWidth();
 
         // App title
         ImGui::SetCursorPos(ImVec2(0, 30));

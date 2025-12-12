@@ -177,6 +177,18 @@ struct TabStyle {
     bool indicatorCentered = true;               // Center the indicator
     float indicatorHeight = 3.0f;                // Indicator thickness
     float indicatorPadding = 4.0f;               // Padding from tab edges when full width
+    bool useGradient = true;                     // Use gradient background (false = solid color)
+    bool scrollable = false;                     // Enable horizontal scrolling for overflow
+    float minTabWidth = 80.0f;                   // Minimum tab width before scrolling
+    float scrollArrowWidth = 24.0f;              // Width of scroll arrow buttons
+};
+
+// Small tab style configuration
+struct SmallTabStyle {
+    bool allowWrap = false;                      // Allow wrapping to multiple lines
+    float tabPadding = 16.0f;                    // Horizontal padding per tab
+    float tabSpacing = 8.0f;                     // Space between tabs
+    float rowSpacing = 4.0f;                     // Space between rows (when wrapping)
 };
 
 // Large tabs with icons and text (for main sections)
@@ -186,6 +198,8 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
 // Small tabs (text only or with icons)
 int TabBarSmall(const char* id, const char** labels, int count, int current);
 int TabBarSmallIcon(const char* id, const char** icons, const char** labels, int count, int current);
+int TabBarSmallEx(const char* id, const char** labels, int count, int current, const SmallTabStyle& style);
+int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, int count, int current, const SmallTabStyle& style);
 
 // RadioButton - Two styles
 // Segmented control (horizontal tab-like buttons)
@@ -199,7 +213,8 @@ bool RadioButtonClassic(const char* label, int* v, int buttonValue); // Indicato
 // SubTab - Smaller tabs for sub-page navigation
 enum class SubTabStyle {
     Underline = 0,  // Underline indicator below text
-    Pill = 1        // Pill/rounded background fill
+    Pill = 1,       // Pill/rounded background fill (solid)
+    Gradient = 2    // Gradient background like Tab
 };
 
 // Text-based sub-tabs with optional icons
@@ -233,6 +248,10 @@ bool ButtonIcon(const char* icon, const char* label, const ImVec2& size = ImVec2
 // ComboBox / Dropdown
 bool Combo(const char* label, int* current, const char** items, int count);
 bool ComboEx(const char* label, int* current, const char** items, int count, float width);
+
+// Language selector dropdown (for i18n)
+// Returns true if language was changed
+bool LanguageCombo(const char* label, std::string& currentLang, float width = 0.0f);
 
 // Color Picker
 bool ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags = 0);

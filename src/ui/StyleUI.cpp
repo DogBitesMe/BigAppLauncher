@@ -231,7 +231,15 @@ void UpdateAnimations(float deltaTime) {
 }
 
 float Animate(ImGuiID id, float target, float speed) {
-    auto& state = g_animations[id];
+    // Check if this is first-time access
+    auto it = g_animations.find(id);
+    if (it == g_animations.end()) {
+        // First time - initialize directly to target (no animation on first display)
+        g_animations[id] = AnimState{target, 0.0f};
+        return target;
+    }
+
+    auto& state = it->second;
 
     // Smooth interpolation with damping
     float diff = target - state.current;
@@ -249,7 +257,15 @@ float Animate(ImGuiID id, float target, float speed) {
 }
 
 float AnimateLinear(ImGuiID id, float target, float speed) {
-    auto& state = g_animations[id];
+    // Check if this is first-time access
+    auto it = g_animations.find(id);
+    if (it == g_animations.end()) {
+        // First time - initialize directly to target (no animation on first display)
+        g_animations[id] = AnimState{target, 0.0f};
+        return target;
+    }
+
+    auto& state = it->second;
 
     float diff = target - state.current;
     float step = speed * g_deltaTime;
