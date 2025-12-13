@@ -690,9 +690,12 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
 
     // Track scroll state using ImGui storage
     float* scrollOffset = nullptr;
+    int* lastActiveTab = nullptr;
     if (needsScroll) {
         ImGuiID scrollId = window->GetID("##tabscroll");
+        ImGuiID lastTabId = window->GetID("##tablast");
         scrollOffset = ImGui::GetStateStorage()->GetFloatRef(scrollId, 0.0f);
+        lastActiveTab = ImGui::GetStateStorage()->GetIntRef(lastTabId, current);
     }
 
     // Calculate visible area and tab width
@@ -701,21 +704,25 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
     float tabW = needsScroll ? style.minTabWidth : (totalW / count);
     float contentW = count * tabW;
 
-    // Clamp scroll offset
+    // Clamp scroll offset and auto-scroll only when active tab changes
     if (scrollOffset) {
         float maxScroll = std::max(0.0f, contentW - visibleW);
-        *scrollOffset = std::clamp(*scrollOffset, 0.0f, maxScroll);
 
-        // Auto-scroll to show active tab
-        float activeTabLeft = current * tabW;
-        float activeTabRight = activeTabLeft + tabW;
-        float scrollOff = *scrollOffset;
+        // Only auto-scroll when active tab changed (not from arrow clicks)
+        if (lastActiveTab && *lastActiveTab != current) {
+            float activeTabLeft = current * tabW;
+            float activeTabRight = activeTabLeft + tabW;
 
-        if (activeTabLeft < scrollOff) {
-            *scrollOffset = activeTabLeft;  // Scroll left to show active tab
-        } else if (activeTabRight > scrollOff + visibleW) {
-            *scrollOffset = activeTabRight - visibleW;  // Scroll right to show active tab
+            if (activeTabLeft < *scrollOffset) {
+                *scrollOffset = activeTabLeft;  // Scroll left to show active tab
+            } else if (activeTabRight > *scrollOffset + visibleW) {
+                *scrollOffset = activeTabRight - visibleW;  // Scroll right to show active tab
+            }
+            *lastActiveTab = current;
         }
+
+        // Always clamp after any adjustment
+        *scrollOffset = std::clamp(*scrollOffset, 0.0f, maxScroll);
     }
 
     ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + tabH));
