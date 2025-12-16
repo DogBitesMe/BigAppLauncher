@@ -280,12 +280,15 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
     // Two-column layout with fixed height
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
-    float contentHeight = height - 4.0f;  // Reduce more to avoid scrollbar
+    float contentHeight = height - 8.0f;  // Reduce more to eliminate scroll
+
+    // Calculate box heights - left has 2 boxes with spacing, right has 1 box
+    float spacing = 8.0f;  // EndGroupBoxFlat adds Spacing
+    float boxHeight = (contentHeight - spacing) / 2.0f;  // Split height for two boxes
+    float rightBoxHeight = contentHeight;  // Right box uses full height
 
     // Left column - two Flat GroupBoxes (no nested boxes)
     ImGui::BeginChild("##AimbotLeft", ImVec2(leftWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar);
-
-    float boxHeight = (contentHeight - PADDING) / 2.0f;  // Split height for two boxes
 
     // Upper Box - Aimbot Settings
     if (StyleUI::BeginGroupBoxFlat("Aimbot", ImVec2(0, boxHeight))) {
@@ -318,7 +321,7 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
     ImGui::SameLine();
     ImGui::BeginChild("##AimbotRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar);
 
-    if (StyleUI::BeginGroupBoxFlat("Configuration", ImVec2(0, contentHeight - 4.0f))) {
+    if (StyleUI::BeginGroupBoxFlat("Configuration", ImVec2(0, rightBoxHeight))) {
         // Sub-tabs inside GroupBox
         const char* subTabs[] = { "General", "Prediction", "Silent" };
         m_aimbotSubTab = StyleUI::TabBarButton("##AimbotSubTabs", subTabs, 3, m_aimbotSubTab);

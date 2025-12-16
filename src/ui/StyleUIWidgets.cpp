@@ -331,8 +331,9 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
-    // Use provided size or auto-resize, no scrollbar
+    // Use provided size or auto-resize, no scrollbar, force window padding
     ImGuiChildFlags childFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
+    childFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
     ImGui::BeginChild(label, contentSize, childFlags, ImGuiWindowFlags_NoScrollbar);
 
     if (window->SkipItems) {
@@ -362,8 +363,8 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
             );
         }
 
-        // Move cursor below title (WindowPadding handles X padding)
-        ImGui::SetCursorPosY(ImGui::GetFontSize() + padY * 2);
+        // Use Dummy to move cursor below title, preserving WindowPadding X offset
+        ImGui::Dummy(ImVec2(0, ImGui::GetFontSize() + padY));
     }
     // WindowPadding handles initial cursor position when no title
 
@@ -422,8 +423,9 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
-    // Use provided size or auto-resize, no scrollbar
+    // Use provided size or auto-resize, no scrollbar, force window padding
     ImGuiChildFlags childFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
+    childFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
     ImGui::BeginChild(label, contentSize, childFlags, ImGuiWindowFlags_NoScrollbar);
 
     if (window->SkipItems) {
@@ -453,8 +455,8 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
             );
         }
 
-        // Move cursor below title (WindowPadding handles X padding)
-        ImGui::SetCursorPosY(ImGui::GetFontSize() + padY * 2);
+        // Use Dummy to move cursor below title, preserving WindowPadding X offset
+        ImGui::Dummy(ImVec2(0, ImGui::GetFontSize() + padY));
     }
     // WindowPadding handles initial cursor position when no title
 
