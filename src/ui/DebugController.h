@@ -29,7 +29,7 @@ public:
     bool showDebugWindow = true;
 
     // Skip entry page option
-    bool skipEntryPage = false;
+    bool skipEntryPage = true;
 
     // Render the debug controller window
     void Render(LoginScreen* loginScreen);

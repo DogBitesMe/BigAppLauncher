@@ -59,6 +59,9 @@ private:
     int m_aimbotBoneIndex = 0;  // 0=Head, 1=Neck, 2=Chest
     int m_aimbotKeyIndex = 0;
     StyleUI::HotkeyBinding m_aimbotKey = { 0x02, false, false, false }; // Right mouse
+    float m_aimSpeed = 5.0f;
+    float m_aimAcceleration = 2.0f;
+    bool m_holdToAim = true;
 
     // Triggerbot settings
     bool m_triggerbotEnabled = false;

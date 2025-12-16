@@ -362,17 +362,71 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
 
         // Content based on sub-tab
         if (m_aimbotSubTab == 0) {
-            // General tab
-            if (StyleUI::BeginGroupBoxNested("Target Settings")) {
-                StyleUI::Checkbox("Auto Switch Target", &m_aimbotVisibleOnly);
-                StyleUI::SliderFloat("Switch Delay", &m_triggerbotDelay, 0.0f, 500.0f, "%.0f ms");
-                StyleUI::EndGroupBoxNested();
-            }
+            // General tab - three column layout
+            float availWidth = ImGui::GetContentRegionAvail().x;
+            float availHeight = ImGui::GetContentRegionAvail().y;
+            float colSpacing = 8.0f;
+            float colWidth = (availWidth - colSpacing * 2) / 3.0f;
 
-            if (StyleUI::BeginGroupBoxNested("Keybind")) {
-                StyleUI::HotkeyInput("Aimbot Key", &m_aimbotKey);
+            // Column 1: Target Settings (外層 BeginChild 控制布局)
+            ImGui::BeginChild("##GenCol1", ImVec2(colWidth, availHeight), false,
+                ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            if (StyleUI::BeginGroupBoxNested("Target", ImVec2(0, availHeight))) {
+                StyleUI::Checkbox("Enable", &m_aimbotEnabled);
+                StyleUI::Checkbox("Auto Switch", &m_aimbotVisibleOnly);
+                ImGui::Separator();
+                StyleUI::SliderFloat("Switch Delay", &m_triggerbotDelay, 0.0f, 500.0f, "%.0f ms");
+                StyleUI::Checkbox("Visible Only", &m_aimbotVisibleOnly);
+                ImGui::Separator();
+                StyleUI::SliderFloat("FOV", &m_aimbotFov, 1.0f, 90.0f, "%.1f");
+                StyleUI::SliderFloat("Distance", &m_espMaxDistance, 100.0f, 1000.0f, "%.0f");
+                StyleUI::SliderFloat("Smooth", &m_aimbotSmooth, 1.0f, 20.0f, "%.1f");
+                ImGui::Separator();
+                const char* priorities[] = { "Distance", "Crosshair", "Health" };
+                StyleUI::Combo("Priority", &m_aimbotBoneIndex, priorities, 3);
+                const char* bones[] = { "Head", "Neck", "Chest", "Body" };
+                StyleUI::Combo("Target Bone", &m_aimbotBoneIndex, bones, 4);
+                ImGui::Separator();
+                StyleUI::Checkbox("Ignore Team", &m_aimbotSilent);
+                StyleUI::Checkbox("Ignore Bots", &m_triggerbotOnKey);
+                StyleUI::Checkbox("Ignore Smoke", &m_noSmoke);
+                StyleUI::Checkbox("Ignore Flash", &m_noFlash);
+                ImGui::Separator();
+                StyleUI::SliderFloat("Reaction", &m_aimAcceleration, 0.0f, 200.0f, "%.0f ms");
+                StyleUI::SliderFloat("Humanize", &m_radarZoom, 0.0f, 10.0f, "%.1f");
+                StyleUI::Checkbox("Draw FOV", &m_espBox);
+                StyleUI::Checkbox("Draw Target", &m_espName);
+                ImGui::Spacing();
+                ImGui::Spacing();
                 StyleUI::EndGroupBoxNested();
             }
+            ImGui::EndChild();
+
+            ImGui::SameLine(0, colSpacing);
+
+            // Column 2: Speed Settings
+            ImGui::BeginChild("##GenCol2", ImVec2(colWidth, availHeight), false,
+                ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            if (StyleUI::BeginGroupBoxNested("Speed", ImVec2(0, availHeight))) {
+                StyleUI::SliderFloat("Aim Speed", &m_aimSpeed, 1.0f, 20.0f, "%.1f");
+                StyleUI::SliderFloat("Acceleration", &m_aimAcceleration, 0.5f, 5.0f, "%.1f");
+                StyleUI::SliderFloat("Randomize", &m_flashAlpha, 0.0f, 10.0f, "%.1f");
+                StyleUI::EndGroupBoxNested();
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine(0, colSpacing);
+
+            // Column 3: Keybind
+            ImGui::BeginChild("##GenCol3", ImVec2(colWidth, availHeight), false,
+                ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+            if (StyleUI::BeginGroupBoxNested("Keybind", ImVec2(0, availHeight))) {
+                StyleUI::HotkeyInput("Aimbot Key", &m_aimbotKey);
+                StyleUI::Checkbox("Hold to Aim", &m_holdToAim);
+                StyleUI::Checkbox("Toggle Mode", &m_aimbotSilent);
+                StyleUI::EndGroupBoxNested();
+            }
+            ImGui::EndChild();
         } else if (m_aimbotSubTab == 1) {
             // Prediction tab
             if (StyleUI::BeginGroupBoxNested("Prediction Settings")) {

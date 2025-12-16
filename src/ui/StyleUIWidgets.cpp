@@ -334,7 +334,7 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     // Use provided size or auto-resize, no scrollbar, force window padding
     ImGuiChildFlags childFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
     childFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
-    ImGui::BeginChild(label, contentSize, childFlags, ImGuiWindowFlags_NoScrollbar);
+    ImGui::BeginChild(label, contentSize, childFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (window->SkipItems) {
         return true;
@@ -423,10 +423,16 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
-    // Use provided size or auto-resize, no scrollbar, force window padding
+    // Use provided size or auto-resize, force window padding
     ImGuiChildFlags childFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
     childFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
-    ImGui::BeginChild(label, contentSize, childFlags, ImGuiWindowFlags_NoScrollbar);
+
+    // Only disable scroll when auto-height; allow scroll when fixed height
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_None;
+    if (contentSize.y <= 0) {
+        windowFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    }
+    ImGui::BeginChild(label, contentSize, childFlags, windowFlags);
 
     if (window->SkipItems) {
         return true;

@@ -58,9 +58,9 @@ private:
     LoginResult m_loginResult = LoginResult::Success;
 
     // Input buffers
-    char m_cardKey[128] = "";
-    char m_username[64] = "";
-    char m_password[64] = "";
+    char m_cardKey[128] = "XXXX-XXXX-XXXX-XXXX";
+    char m_username[64] = "demo";
+    char m_password[64] = "password";
     char m_confirmPassword[64] = "";
     char m_email[128] = "";
     char m_oldPassword[64] = "";
