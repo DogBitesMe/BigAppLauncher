@@ -277,79 +277,80 @@ void LargeDemoScreen::RenderContent(float width, float height) {
 }
 
 void LargeDemoScreen::RenderAimbotTab(float width, float height) {
-    const auto& colors = StyleUI::GetColorScheme();
-
-    // Two-column layout
+    // Two-column layout with fixed height
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
+    float contentHeight = height - 4.0f;  // Reduce more to avoid scrollbar
 
-    // Left column
-    ImGui::BeginChild("##AimbotLeft", ImVec2(leftWidth, 0), false);
+    // Left column - two Flat GroupBoxes (no nested boxes)
+    ImGui::BeginChild("##AimbotLeft", ImVec2(leftWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar);
 
-    // Aimbot Main GroupBox (Flat style)
-    if (StyleUI::BeginGroupBoxFlat("Aimbot")) {
+    float boxHeight = (contentHeight - PADDING) / 2.0f;  // Split height for two boxes
+
+    // Upper Box - Aimbot Settings
+    if (StyleUI::BeginGroupBoxFlat("Aimbot", ImVec2(0, boxHeight))) {
         StyleUI::ToggleSwitch("Enable Aimbot", &m_aimbotEnabled);
-
-        if (m_aimbotEnabled) {
-            ImGui::Spacing();
-            StyleUI::Checkbox("Silent Aim", &m_aimbotSilent);
-            StyleUI::Checkbox("Visible Only", &m_aimbotVisibleOnly);
-
-            ImGui::Spacing();
-            StyleUI::SliderFloat("FOV", &m_aimbotFov, 1.0f, 90.0f, "%.1f");
-            StyleUI::SliderFloat("Smoothness", &m_aimbotSmooth, 1.0f, 20.0f, "%.1f");
-
-            ImGui::Spacing();
-            const char* bones[] = { "Head", "Neck", "Chest" };
-            StyleUI::Combo("Target Bone", &m_aimbotBoneIndex, bones, 3);
-        }
-
+        ImGui::Spacing();
+        StyleUI::Checkbox("Silent Aim", &m_aimbotSilent);
+        StyleUI::Checkbox("Visible Only", &m_aimbotVisibleOnly);
+        ImGui::Spacing();
+        StyleUI::SliderFloat("FOV", &m_aimbotFov, 1.0f, 90.0f, "%.1f");
+        StyleUI::SliderFloat("Smoothness", &m_aimbotSmooth, 1.0f, 20.0f, "%.1f");
+        const char* bones[] = { "Head", "Neck", "Chest" };
+        StyleUI::Combo("Target Bone", &m_aimbotBoneIndex, bones, 3);
         StyleUI::EndGroupBoxFlat();
     }
 
-    ImGui::Spacing();
-
-    // Triggerbot GroupBox
-    if (StyleUI::BeginGroupBoxFlat("Triggerbot")) {
+    // Lower Box - Triggerbot
+    if (StyleUI::BeginGroupBoxFlat("Triggerbot", ImVec2(0, boxHeight))) {
         StyleUI::ToggleSwitch("Enable Triggerbot", &m_triggerbotEnabled);
-
         if (m_triggerbotEnabled) {
             ImGui::Spacing();
             StyleUI::SliderFloat("Delay (ms)", &m_triggerbotDelay, 0.0f, 200.0f, "%.0f");
             StyleUI::Checkbox("On Key Only", &m_triggerbotOnKey);
         }
-
         StyleUI::EndGroupBoxFlat();
     }
 
     ImGui::EndChild();
 
-    // Right column
+    // Right column - fixed height, Tab inside GroupBox
     ImGui::SameLine();
-    ImGui::BeginChild("##AimbotRight", ImVec2(rightWidth, 0), false);
+    ImGui::BeginChild("##AimbotRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar);
 
-    // Sub-tabs for right panel
-    const char* subTabs[] = { "General", "Prediction", "Silent" };
-    m_aimbotSubTab = StyleUI::TabBarButton("##AimbotSubTabs", subTabs, 3, m_aimbotSubTab);
-
-    ImGui::Spacing();
-    ImGui::Spacing();
-
-    // Main content area with nested GroupBoxes
-    if (StyleUI::BeginGroupBoxFlat("Configuration")) {
-
-        // Nested sections
-        if (StyleUI::BeginGroupBoxNested("Target Settings")) {
-            StyleUI::Checkbox("Auto Switch Target", &m_aimbotVisibleOnly);
-            StyleUI::SliderFloat("Switch Delay", &m_triggerbotDelay, 0.0f, 500.0f, "%.0f ms");
-            StyleUI::EndGroupBoxNested();
-        }
+    if (StyleUI::BeginGroupBoxFlat("Configuration", ImVec2(0, contentHeight - 4.0f))) {
+        // Sub-tabs inside GroupBox
+        const char* subTabs[] = { "General", "Prediction", "Silent" };
+        m_aimbotSubTab = StyleUI::TabBarButton("##AimbotSubTabs", subTabs, 3, m_aimbotSubTab);
 
         ImGui::Spacing();
+        ImGui::Spacing();
 
-        if (StyleUI::BeginGroupBoxNested("Keybind")) {
-            StyleUI::HotkeyInput("Aimbot Key", &m_aimbotKey);
-            StyleUI::EndGroupBoxNested();
+        // Content based on sub-tab
+        if (m_aimbotSubTab == 0) {
+            // General tab
+            if (StyleUI::BeginGroupBoxNested("Target Settings")) {
+                StyleUI::Checkbox("Auto Switch Target", &m_aimbotVisibleOnly);
+                StyleUI::SliderFloat("Switch Delay", &m_triggerbotDelay, 0.0f, 500.0f, "%.0f ms");
+                StyleUI::EndGroupBoxNested();
+            }
+
+            if (StyleUI::BeginGroupBoxNested("Keybind")) {
+                StyleUI::HotkeyInput("Aimbot Key", &m_aimbotKey);
+                StyleUI::EndGroupBoxNested();
+            }
+        } else if (m_aimbotSubTab == 1) {
+            // Prediction tab
+            if (StyleUI::BeginGroupBoxNested("Prediction Settings")) {
+                ImGui::Text("Prediction settings would go here");
+                StyleUI::EndGroupBoxNested();
+            }
+        } else {
+            // Silent tab
+            if (StyleUI::BeginGroupBoxNested("Silent Aim Settings")) {
+                ImGui::Text("Silent aim settings would go here");
+                StyleUI::EndGroupBoxNested();
+            }
         }
 
         StyleUI::EndGroupBoxFlat();
@@ -361,24 +362,31 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
 void LargeDemoScreen::RenderVisualTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
+    float contentHeight = height - 2.0f;  // Slightly smaller to avoid scrollbar
 
-    // Left column
-    ImGui::BeginChild("##VisualLeft", ImVec2(leftWidth, 0), false);
+    // Left column - fixed height
+    ImGui::BeginChild("##VisualLeft", ImVec2(leftWidth, contentHeight), false);
 
-    if (StyleUI::BeginGroupBoxFlat("ESP")) {
-        StyleUI::ToggleSwitch("Enable ESP", &m_espEnabled);
+    if (StyleUI::BeginGroupBoxFlat("ESP", ImVec2(0, contentHeight))) {
 
-        if (m_espEnabled) {
-            ImGui::Spacing();
+        if (StyleUI::BeginGroupBoxNested("Toggle")) {
+            StyleUI::ToggleSwitch("Enable ESP", &m_espEnabled);
+            StyleUI::EndGroupBoxNested();
+        }
+
+        if (StyleUI::BeginGroupBoxNested("Elements")) {
             StyleUI::Checkbox("Box", &m_espBox);
             StyleUI::Checkbox("Skeleton", &m_espSkeleton);
             StyleUI::Checkbox("Name", &m_espName);
             StyleUI::Checkbox("Health", &m_espHealth);
             StyleUI::Checkbox("Distance", &m_espDistance);
             StyleUI::Checkbox("Snaplines", &m_espSnaplines);
+            StyleUI::EndGroupBoxNested();
+        }
 
-            ImGui::Spacing();
+        if (StyleUI::BeginGroupBoxNested("Range")) {
             StyleUI::SliderFloat("Max Distance", &m_espMaxDistance, 100.0f, 1000.0f, "%.0f m");
+            StyleUI::EndGroupBoxNested();
         }
 
         StyleUI::EndGroupBoxFlat();
@@ -386,53 +394,54 @@ void LargeDemoScreen::RenderVisualTab(float width, float height) {
 
     ImGui::EndChild();
 
-    // Right column
+    // Right column - fixed height, Tab inside GroupBox
     ImGui::SameLine();
-    ImGui::BeginChild("##VisualRight", ImVec2(rightWidth, 0), false);
+    ImGui::BeginChild("##VisualRight", ImVec2(rightWidth, contentHeight), false);
 
-    const char* subTabs[] = { "Colors", "Chams", "World" };
-    m_visualSubTab = StyleUI::TabBarButton("##VisualSubTabs", subTabs, 3, m_visualSubTab);
+    if (StyleUI::BeginGroupBoxFlat("Visual Settings", ImVec2(0, contentHeight))) {
+        const char* subTabs[] = { "Colors", "Chams", "World" };
+        m_visualSubTab = StyleUI::TabBarButton("##VisualSubTabs", subTabs, 3, m_visualSubTab);
 
-    ImGui::Spacing();
-    ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
 
-    if (m_visualSubTab == 0) {
-        // Colors tab
-        if (StyleUI::BeginGroupBoxFlat("ESP Colors")) {
-            StyleUI::ColorEdit4("Box Color", m_espBoxColor);
-            StyleUI::ColorEdit4("Name Color", m_espNameColor);
-            StyleUI::EndGroupBoxFlat();
-        }
-    } else if (m_visualSubTab == 1) {
-        // Chams tab
-        if (StyleUI::BeginGroupBoxFlat("Chams")) {
-            StyleUI::ToggleSwitch("Enable Chams", &m_chamsEnabled);
+        if (m_visualSubTab == 0) {
+            // Colors tab
+            if (StyleUI::BeginGroupBoxNested("ESP Colors")) {
+                StyleUI::ColorEdit4("Box Color", m_espBoxColor);
+                StyleUI::ColorEdit4("Name Color", m_espNameColor);
+                StyleUI::EndGroupBoxNested();
+            }
+        } else if (m_visualSubTab == 1) {
+            // Chams tab
+            if (StyleUI::BeginGroupBoxNested("Chams Settings")) {
+                StyleUI::ToggleSwitch("Enable Chams", &m_chamsEnabled);
+                if (m_chamsEnabled) {
+                    ImGui::Spacing();
+                    StyleUI::Checkbox("Visible Only", &m_chamsVisibleOnly);
+                    const char* materials[] = { "Flat", "Textured", "Metallic", "Glow" };
+                    StyleUI::Combo("Material", &m_chamsMaterialIndex, materials, 4);
+                }
+                StyleUI::EndGroupBoxNested();
+            }
 
             if (m_chamsEnabled) {
-                ImGui::Spacing();
-                StyleUI::Checkbox("Visible Only", &m_chamsVisibleOnly);
-
-                const char* materials[] = { "Flat", "Textured", "Metallic", "Glow" };
-                StyleUI::Combo("Material", &m_chamsMaterialIndex, materials, 4);
-
-                ImGui::Spacing();
-
-                if (StyleUI::BeginGroupBoxNested("Colors")) {
+                if (StyleUI::BeginGroupBoxNested("Chams Colors")) {
                     StyleUI::ColorEdit4("Visible", m_chamsVisibleColor);
                     StyleUI::ColorEdit4("Hidden", m_chamsHiddenColor);
                     StyleUI::EndGroupBoxNested();
                 }
             }
+        } else {
+            // World tab
+            if (StyleUI::BeginGroupBoxNested("World ESP")) {
+                StyleUI::Checkbox("Item ESP", &m_espEnabled);
+                StyleUI::Checkbox("Vehicle ESP", &m_espBox);
+                StyleUI::EndGroupBoxNested();
+            }
+        }
 
-            StyleUI::EndGroupBoxFlat();
-        }
-    } else {
-        // World tab
-        if (StyleUI::BeginGroupBoxFlat("World ESP")) {
-            StyleUI::Checkbox("Item ESP", &m_espEnabled);
-            StyleUI::Checkbox("Vehicle ESP", &m_espBox);
-            StyleUI::EndGroupBoxFlat();
-        }
+        StyleUI::EndGroupBoxFlat();
     }
 
     ImGui::EndChild();
@@ -441,52 +450,68 @@ void LargeDemoScreen::RenderVisualTab(float width, float height) {
 void LargeDemoScreen::RenderMiscTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
+    float contentHeight = height - 2.0f;  // Slightly smaller to avoid scrollbar
 
-    // Left column
-    ImGui::BeginChild("##MiscLeft", ImVec2(leftWidth, 0), false);
+    // Left column - fixed height
+    ImGui::BeginChild("##MiscLeft", ImVec2(leftWidth, contentHeight), false);
 
-    if (StyleUI::BeginGroupBoxFlat("Movement")) {
-        StyleUI::ToggleSwitch("Bunny Hop", &m_bunnyHop);
-        StyleUI::ToggleSwitch("Auto Strafe", &m_autoStrafe);
-        StyleUI::EndGroupBoxFlat();
-    }
+    if (StyleUI::BeginGroupBoxFlat("Misc", ImVec2(0, contentHeight))) {
 
-    ImGui::Spacing();
-
-    if (StyleUI::BeginGroupBoxFlat("Visual Removal")) {
-        StyleUI::ToggleSwitch("No Flash", &m_noFlash);
-        StyleUI::ToggleSwitch("No Smoke", &m_noSmoke);
-
-        if (!m_noFlash) {
-            ImGui::Spacing();
-            StyleUI::SliderFloat("Flash Alpha", &m_flashAlpha, 0.0f, 1.0f, "%.2f");
+        if (StyleUI::BeginGroupBoxNested("Movement")) {
+            StyleUI::ToggleSwitch("Bunny Hop", &m_bunnyHop);
+            StyleUI::ToggleSwitch("Auto Strafe", &m_autoStrafe);
+            StyleUI::EndGroupBoxNested();
         }
+
+        if (StyleUI::BeginGroupBoxNested("Visual Removal")) {
+            StyleUI::ToggleSwitch("No Flash", &m_noFlash);
+            StyleUI::ToggleSwitch("No Smoke", &m_noSmoke);
+            if (!m_noFlash) {
+                ImGui::Spacing();
+                StyleUI::SliderFloat("Flash Alpha", &m_flashAlpha, 0.0f, 1.0f, "%.2f");
+            }
+            StyleUI::EndGroupBoxNested();
+        }
+
         StyleUI::EndGroupBoxFlat();
     }
 
     ImGui::EndChild();
 
-    // Right column
+    // Right column - fixed height, Tab inside GroupBox
     ImGui::SameLine();
-    ImGui::BeginChild("##MiscRight", ImVec2(rightWidth, 0), false);
+    ImGui::BeginChild("##MiscRight", ImVec2(rightWidth, contentHeight), false);
 
-    const char* subTabs[] = { "Radar", "Skins", "Other" };
-    m_miscSubTab = StyleUI::TabBarButton("##MiscSubTabs", subTabs, 3, m_miscSubTab);
+    if (StyleUI::BeginGroupBoxFlat("Misc Settings", ImVec2(0, contentHeight))) {
+        const char* subTabs[] = { "Radar", "Skins", "Other" };
+        m_miscSubTab = StyleUI::TabBarButton("##MiscSubTabs", subTabs, 3, m_miscSubTab);
 
-    ImGui::Spacing();
-    ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
 
-    if (m_miscSubTab == 0) {
-        if (StyleUI::BeginGroupBoxFlat("Radar")) {
-            StyleUI::ToggleSwitch("Enable Radar", &m_radarEnabled);
-
-            if (m_radarEnabled) {
-                ImGui::Spacing();
-                StyleUI::SliderFloat("Size", &m_radarSize, 100.0f, 400.0f, "%.0f");
-                StyleUI::SliderFloat("Zoom", &m_radarZoom, 0.5f, 3.0f, "%.1fx");
+        if (m_miscSubTab == 0) {
+            if (StyleUI::BeginGroupBoxNested("Radar")) {
+                StyleUI::ToggleSwitch("Enable Radar", &m_radarEnabled);
+                if (m_radarEnabled) {
+                    ImGui::Spacing();
+                    StyleUI::SliderFloat("Size", &m_radarSize, 100.0f, 400.0f, "%.0f");
+                    StyleUI::SliderFloat("Zoom", &m_radarZoom, 0.5f, 3.0f, "%.1fx");
+                }
+                StyleUI::EndGroupBoxNested();
             }
-            StyleUI::EndGroupBoxFlat();
+        } else if (m_miscSubTab == 1) {
+            if (StyleUI::BeginGroupBoxNested("Skins")) {
+                ImGui::Text("Skin settings would go here");
+                StyleUI::EndGroupBoxNested();
+            }
+        } else {
+            if (StyleUI::BeginGroupBoxNested("Other")) {
+                ImGui::Text("Other settings would go here");
+                StyleUI::EndGroupBoxNested();
+            }
         }
+
+        StyleUI::EndGroupBoxFlat();
     }
 
     ImGui::EndChild();
@@ -495,25 +520,28 @@ void LargeDemoScreen::RenderMiscTab(float width, float height) {
 void LargeDemoScreen::RenderSettingsTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
+    float contentHeight = height - 2.0f;  // Slightly smaller to avoid scrollbar
 
-    // Left column
-    ImGui::BeginChild("##SettingsLeft", ImVec2(leftWidth, 0), false);
+    // Left column - fixed height
+    ImGui::BeginChild("##SettingsLeft", ImVec2(leftWidth, contentHeight), false);
 
-    if (StyleUI::BeginGroupBoxFlat("Config")) {
-        StyleUI::ToggleSwitch("Save on Exit", &m_saveOnExit);
-        StyleUI::ToggleSwitch("Load on Start", &m_loadOnStart);
+    if (StyleUI::BeginGroupBoxFlat("Config", ImVec2(0, contentHeight))) {
 
-        ImGui::Spacing();
-        ImGui::Spacing();
-
-        if (StyleUI::ButtonGradient("Save Config", ImVec2(ImGui::GetContentRegionAvail().x, 32))) {
-            // Save action
+        if (StyleUI::BeginGroupBoxNested("Auto Save")) {
+            StyleUI::ToggleSwitch("Save on Exit", &m_saveOnExit);
+            StyleUI::ToggleSwitch("Load on Start", &m_loadOnStart);
+            StyleUI::EndGroupBoxNested();
         }
 
-        ImGui::Spacing();
-
-        if (StyleUI::ButtonOutline("Load Config", ImVec2(ImGui::GetContentRegionAvail().x, 32))) {
-            // Load action
+        if (StyleUI::BeginGroupBoxNested("Actions")) {
+            if (StyleUI::ButtonGradient("Save Config", ImVec2(ImGui::GetContentRegionAvail().x, 32))) {
+                // Save action
+            }
+            ImGui::Spacing();
+            if (StyleUI::ButtonOutline("Load Config", ImVec2(ImGui::GetContentRegionAvail().x, 32))) {
+                // Load action
+            }
+            StyleUI::EndGroupBoxNested();
         }
 
         StyleUI::EndGroupBoxFlat();
@@ -521,48 +549,52 @@ void LargeDemoScreen::RenderSettingsTab(float width, float height) {
 
     ImGui::EndChild();
 
-    // Right column
+    // Right column - fixed height, Tab inside GroupBox
     ImGui::SameLine();
-    ImGui::BeginChild("##SettingsRight", ImVec2(rightWidth, 0), false);
+    ImGui::BeginChild("##SettingsRight", ImVec2(rightWidth, contentHeight), false);
 
-    const char* subTabs[] = { "Theme", "Language", "About" };
-    m_settingsSubTab = StyleUI::TabBarButton("##SettingsSubTabs", subTabs, 3, m_settingsSubTab);
+    if (StyleUI::BeginGroupBoxFlat("Settings", ImVec2(0, contentHeight))) {
+        const char* subTabs[] = { "Theme", "Language", "About" };
+        m_settingsSubTab = StyleUI::TabBarButton("##SettingsSubTabs", subTabs, 3, m_settingsSubTab);
 
-    ImGui::Spacing();
-    ImGui::Spacing();
+        ImGui::Spacing();
+        ImGui::Spacing();
 
-    if (m_settingsSubTab == 0) {
-        if (StyleUI::BeginGroupBoxFlat("Theme")) {
-            const char* themes[] = { "Dark Blue", "Dark Purple", "Dark Green", "Dark Red" };
-            int prevTheme = m_themeIndex;
-            StyleUI::Combo("Color Theme", &m_themeIndex, themes, 4);
+        if (m_settingsSubTab == 0) {
+            if (StyleUI::BeginGroupBoxNested("Theme")) {
+                const char* themes[] = { "Dark Blue", "Dark Purple", "Dark Green", "Dark Red" };
+                int prevTheme = m_themeIndex;
+                StyleUI::Combo("Color Theme", &m_themeIndex, themes, 4);
 
-            if (m_themeIndex != prevTheme) {
-                switch (m_themeIndex) {
-                    case 0: StyleUI::SetColorScheme(StyleUI::GetDarkBlueScheme()); break;
-                    case 1: StyleUI::SetColorScheme(StyleUI::GetDarkPurpleScheme()); break;
-                    case 2: StyleUI::SetColorScheme(StyleUI::GetDarkGreenScheme()); break;
-                    case 3: StyleUI::SetColorScheme(StyleUI::GetDarkRedScheme()); break;
+                if (m_themeIndex != prevTheme) {
+                    switch (m_themeIndex) {
+                        case 0: StyleUI::SetColorScheme(StyleUI::GetDarkBlueScheme()); break;
+                        case 1: StyleUI::SetColorScheme(StyleUI::GetDarkPurpleScheme()); break;
+                        case 2: StyleUI::SetColorScheme(StyleUI::GetDarkGreenScheme()); break;
+                        case 3: StyleUI::SetColorScheme(StyleUI::GetDarkRedScheme()); break;
+                    }
                 }
+                StyleUI::EndGroupBoxNested();
             }
-            StyleUI::EndGroupBoxFlat();
-        }
-    } else if (m_settingsSubTab == 1) {
-        if (StyleUI::BeginGroupBoxFlat("Language")) {
-            if (StyleUI::LanguageCombo("Interface Language", m_currentLanguage)) {
-                i18n::SetLanguage(m_currentLanguage);
+        } else if (m_settingsSubTab == 1) {
+            if (StyleUI::BeginGroupBoxNested("Language")) {
+                if (StyleUI::LanguageCombo("Interface Language", m_currentLanguage)) {
+                    i18n::SetLanguage(m_currentLanguage);
+                }
+                StyleUI::EndGroupBoxNested();
             }
-            StyleUI::EndGroupBoxFlat();
+        } else {
+            if (StyleUI::BeginGroupBoxNested("About")) {
+                ImGui::Text("Demo Menu v1.0.0");
+                ImGui::Spacing();
+                ImGui::TextWrapped("This is a demonstration of the NEXO-style large menu layout.");
+                ImGui::Spacing();
+                ImGui::Text("Built with ImGui + StyleUI");
+                StyleUI::EndGroupBoxNested();
+            }
         }
-    } else {
-        if (StyleUI::BeginGroupBoxFlat("About")) {
-            ImGui::Text("Demo Menu v1.0.0");
-            ImGui::Spacing();
-            ImGui::TextWrapped("This is a demonstration of the NEXO-style large menu layout.");
-            ImGui::Spacing();
-            ImGui::Text("Built with ImGui + StyleUI");
-            StyleUI::EndGroupBoxFlat();
-        }
+
+        StyleUI::EndGroupBoxFlat();
     }
 
     ImGui::EndChild();

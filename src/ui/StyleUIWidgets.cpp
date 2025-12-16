@@ -318,16 +318,22 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
 
     ImGui::PushID(id);
 
-    // Light gray background color (no border)
-    ImVec4 flatBgColor = ImVec4(35.0f/255.0f, 40.0f/255.0f, 50.0f/255.0f, 0.6f);
+    // Light gray background color (no border) - lighter than nested boxes
+    ImVec4 flatBgColor = ImVec4(50.0f/255.0f, 55.0f/255.0f, 65.0f/255.0f, 0.5f);
+
+    // Content padding
+    const float padX = 12.0f;
+    const float padY = 10.0f;
 
     ImGui::PushStyleColor(ImGuiCol_ChildBg, flatBgColor);
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f); // Large rounded corners
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(sizes.FramePadding + 4, sizes.FramePadding + 4));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
-    ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY);
+    // Use provided size or auto-resize, no scrollbar
+    ImGuiChildFlags childFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
+    ImGui::BeginChild(label, contentSize, childFlags, ImGuiWindowFlags_NoScrollbar);
 
     if (window->SkipItems) {
         return true;
@@ -338,27 +344,28 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         ImVec2 windowPos = ImGui::GetWindowPos();
 
-        float textY = windowPos.y + sizes.FramePadding;
+        float textY = windowPos.y + padY;
 
         if (icon && icon[0]) {
             char fullLabel[256];
             snprintf(fullLabel, sizeof(fullLabel), "%s  %s", icon, label);
             drawList->AddText(
-                ImVec2(windowPos.x + sizes.FramePadding + 4, textY),
+                ImVec2(windowPos.x + padX, textY),
                 ColorToU32(colors.Text),
                 fullLabel
             );
         } else {
             drawList->AddText(
-                ImVec2(windowPos.x + sizes.FramePadding + 4, textY),
+                ImVec2(windowPos.x + padX, textY),
                 ColorToU32(colors.Text),
                 label
             );
         }
 
-        // Move cursor below title
-        ImGui::SetCursorPosY(ImGui::GetFontSize() + sizes.FramePadding * 2);
+        // Move cursor below title (WindowPadding handles X padding)
+        ImGui::SetCursorPosY(ImGui::GetFontSize() + padY * 2);
     }
+    // WindowPadding handles initial cursor position when no title
 
     return true;
 }
@@ -405,13 +412,19 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     // Darker background color for nested sections
     ImVec4 nestedBgColor = ImVec4(25.0f/255.0f, 28.0f/255.0f, 35.0f/255.0f, 0.8f);
 
+    // Content padding
+    const float padX = 10.0f;
+    const float padY = 8.0f;
+
     ImGui::PushStyleColor(ImGuiCol_ChildBg, nestedBgColor);
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f); // Slightly smaller corners
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(sizes.FramePadding, sizes.FramePadding));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
-    ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY);
+    // Use provided size or auto-resize, no scrollbar
+    ImGuiChildFlags childFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
+    ImGui::BeginChild(label, contentSize, childFlags, ImGuiWindowFlags_NoScrollbar);
 
     if (window->SkipItems) {
         return true;
@@ -422,27 +435,28 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         ImVec2 windowPos = ImGui::GetWindowPos();
 
-        float textY = windowPos.y + sizes.FramePadding;
+        float textY = windowPos.y + padY;
 
         if (icon && icon[0]) {
             char fullLabel[256];
             snprintf(fullLabel, sizeof(fullLabel), "%s  %s", icon, label);
             drawList->AddText(
-                ImVec2(windowPos.x + sizes.FramePadding, textY),
+                ImVec2(windowPos.x + padX, textY),
                 ColorToU32(colors.TextSecondary),
                 fullLabel
             );
         } else {
             drawList->AddText(
-                ImVec2(windowPos.x + sizes.FramePadding, textY),
+                ImVec2(windowPos.x + padX, textY),
                 ColorToU32(colors.TextSecondary),
                 label
             );
         }
 
-        // Move cursor below title
-        ImGui::SetCursorPosY(ImGui::GetFontSize() + sizes.FramePadding * 1.5f);
+        // Move cursor below title (WindowPadding handles X padding)
+        ImGui::SetCursorPosY(ImGui::GetFontSize() + padY * 2);
     }
+    // WindowPadding handles initial cursor position when no title
 
     return true;
 }
@@ -1406,9 +1420,9 @@ int TabBarPillIcon(const char* id, const char** icons, const char** labels, int 
     int result = current;
 
     // Calculate total width based on content
-    float tabH = sizes.TabSmallHeight + 4.0f; // Slightly taller
-    float tabPadding = 20.0f;
-    float tabSpacing = 4.0f;
+    float tabH = sizes.TabSmallHeight - 4.0f; // Smaller, fits within header
+    float tabPadding = 14.0f;
+    float tabSpacing = 2.0f;
 
     // Calculate each tab width
     std::vector<float> tabWidths(count);
@@ -1430,7 +1444,7 @@ int TabBarPillIcon(const char* id, const char** icons, const char** labels, int 
     totalContentWidth += (count - 1) * tabSpacing;
 
     // Pill background - capsule shape
-    float pillPadding = 4.0f;
+    float pillPadding = 3.0f;
     float totalW = totalContentWidth + pillPadding * 2;
     float pillH = tabH + pillPadding * 2;
 
@@ -1460,15 +1474,26 @@ int TabBarPillIcon(const char* id, const char** icons, const char** labels, int 
             dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 15), tabH * 0.5f);
         }
 
-        // Underline indicator for active tab
+        // Underline indicator for active tab - shorter with gradient (center slightly bright)
         if (isActive) {
-            float indicatorY = tabBB.Max.y - 3.0f;
-            float indicatorPadding = 8.0f;
-            dl->AddRectFilled(
-                ImVec2(tabBB.Min.x + indicatorPadding, indicatorY),
-                ImVec2(tabBB.Max.x - indicatorPadding, tabBB.Max.y),
-                ColorToU32(colors.Primary),
-                1.5f
+            float indicatorY = tabBB.Max.y - 2.5f;
+            float indicatorPadding = tabW * 0.25f; // 25% padding on each side
+            ImU32 gradEdge = ColorToU32(ImVec4(colors.Primary.x * 0.6f, colors.Primary.y * 0.6f, colors.Primary.z * 0.6f, 0.7f));
+            ImU32 gradCenter = ColorToU32(colors.Primary);
+            float indicatorLeft = tabBB.Min.x + indicatorPadding;
+            float indicatorRight = tabBB.Max.x - indicatorPadding;
+            float indicatorMid = (indicatorLeft + indicatorRight) * 0.5f;
+            // Left half: dim -> bright
+            dl->AddRectFilledMultiColor(
+                ImVec2(indicatorLeft, indicatorY),
+                ImVec2(indicatorMid, tabBB.Max.y),
+                gradEdge, gradCenter, gradCenter, gradEdge
+            );
+            // Right half: bright -> dim
+            dl->AddRectFilledMultiColor(
+                ImVec2(indicatorMid, indicatorY),
+                ImVec2(indicatorRight, tabBB.Max.y),
+                gradCenter, gradEdge, gradEdge, gradCenter
             );
         }
 
