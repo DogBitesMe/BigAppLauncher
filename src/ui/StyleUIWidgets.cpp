@@ -743,9 +743,15 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
         ImVec2 arrowPos = pos;
         ImRect arrowBB(arrowPos, ImVec2(arrowPos.x + arrowW, arrowPos.y + tabH));
 
-        // Draw arrow background
-        ImU32 arrowBgColor = canScrollLeft ? ColorToU32(colors.BackgroundAlt) : IM_COL32(60, 60, 70, 200);
-        dl->AddRectFilled(arrowBB.Min, arrowBB.Max, arrowBgColor, sizes.Rounding, ImDrawFlags_RoundCornersLeft);
+        // Draw arrow background with gradient (left edge brighter, fading into tab background)
+        // First draw rounded rect as base, then overlay gradient
+        ImU32 bgColor = ColorToU32(colors.BackgroundAlt);
+        dl->AddRectFilled(arrowBB.Min, arrowBB.Max, bgColor, sizes.Rounding, ImDrawFlags_RoundCornersLeft);
+
+        // Gradient overlay: left edge has subtle highlight
+        ImU32 highlightColor = IM_COL32(255, 255, 255, 25);  // Subtle white highlight
+        ImU32 fadeColor = IM_COL32(255, 255, 255, 0);        // Transparent
+        dl->AddRectFilledMultiColor(arrowBB.Min, arrowBB.Max, highlightColor, fadeColor, fadeColor, highlightColor);
 
         // Draw arrow icon (FontAwesome: chevron-left U+F053)
         const char* leftArrow = "\xef\x81\x93";
@@ -762,7 +768,7 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
 
         // Hover effect
         if (canScrollLeft && arrowHovered) {
-            dl->AddRectFilled(arrowBB.Min, arrowBB.Max, IM_COL32(255, 255, 255, 15), sizes.Rounding, ImDrawFlags_RoundCornersLeft);
+            dl->AddRectFilled(arrowBB.Min, arrowBB.Max, IM_COL32(255, 255, 255, 20), sizes.Rounding, ImDrawFlags_RoundCornersLeft);
         }
 
         contentStartX = pos.x + arrowW;
@@ -776,8 +782,14 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
         ImVec2 arrowPos(pos.x + totalW - arrowW, pos.y);
         ImRect arrowBB(arrowPos, ImVec2(arrowPos.x + arrowW, arrowPos.y + tabH));
 
-        ImU32 arrowBgColor = canScrollRight ? ColorToU32(colors.BackgroundAlt) : IM_COL32(60, 60, 70, 200);
-        dl->AddRectFilled(arrowBB.Min, arrowBB.Max, arrowBgColor, sizes.Rounding, ImDrawFlags_RoundCornersRight);
+        // Draw arrow background with gradient (right edge brighter, fading from tab background)
+        ImU32 bgColor = ColorToU32(colors.BackgroundAlt);
+        dl->AddRectFilled(arrowBB.Min, arrowBB.Max, bgColor, sizes.Rounding, ImDrawFlags_RoundCornersRight);
+
+        // Gradient overlay: right edge has subtle highlight
+        ImU32 fadeColor = IM_COL32(255, 255, 255, 0);        // Transparent
+        ImU32 highlightColor = IM_COL32(255, 255, 255, 25);  // Subtle white highlight
+        dl->AddRectFilledMultiColor(arrowBB.Min, arrowBB.Max, fadeColor, highlightColor, highlightColor, fadeColor);
 
         // Draw arrow icon (FontAwesome: chevron-right U+F054)
         const char* rightArrow = "\xef\x81\x94";
@@ -794,7 +806,7 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
 
         // Hover effect
         if (canScrollRight && arrowHovered) {
-            dl->AddRectFilled(arrowBB.Min, arrowBB.Max, IM_COL32(255, 255, 255, 15), sizes.Rounding, ImDrawFlags_RoundCornersRight);
+            dl->AddRectFilled(arrowBB.Min, arrowBB.Max, IM_COL32(255, 255, 255, 20), sizes.Rounding, ImDrawFlags_RoundCornersRight);
         }
 
         contentEndX = pos.x + totalW - arrowW;
