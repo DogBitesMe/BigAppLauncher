@@ -292,6 +292,174 @@ void EndGroupBoxGlass() {
 }
 
 //-----------------------------------------------------------------------------
+// Flat GroupBox - Minimalist style for NEXO-style menus
+//-----------------------------------------------------------------------------
+
+static int g_flatGroupBoxDepth = 0;
+
+bool BeginGroupBoxFlat(const char* label, const ImVec2& size) {
+    return BeginGroupBoxFlatEx(nullptr, label, size);
+}
+
+bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+
+    // Calculate actual size
+    ImVec2 contentSize = size;
+    if (contentSize.x <= 0) contentSize.x = ImGui::GetContentRegionAvail().x;
+    if (contentSize.y <= 0) contentSize.y = 0; // Will auto-resize
+
+    g_flatGroupBoxDepth++;
+
+    ImGui::PushID(id);
+
+    // Light gray background color (no border)
+    ImVec4 flatBgColor = ImVec4(35.0f/255.0f, 40.0f/255.0f, 50.0f/255.0f, 0.6f);
+
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, flatBgColor);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f); // Large rounded corners
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(sizes.FramePadding + 4, sizes.FramePadding + 4));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
+
+    ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY);
+
+    if (window->SkipItems) {
+        return true;
+    }
+
+    // Draw title text (no header bar background)
+    if (label && label[0]) {
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 windowPos = ImGui::GetWindowPos();
+
+        float textY = windowPos.y + sizes.FramePadding;
+
+        if (icon && icon[0]) {
+            char fullLabel[256];
+            snprintf(fullLabel, sizeof(fullLabel), "%s  %s", icon, label);
+            drawList->AddText(
+                ImVec2(windowPos.x + sizes.FramePadding + 4, textY),
+                ColorToU32(colors.Text),
+                fullLabel
+            );
+        } else {
+            drawList->AddText(
+                ImVec2(windowPos.x + sizes.FramePadding + 4, textY),
+                ColorToU32(colors.Text),
+                label
+            );
+        }
+
+        // Move cursor below title
+        ImGui::SetCursorPosY(ImGui::GetFontSize() + sizes.FramePadding * 2);
+    }
+
+    return true;
+}
+
+void EndGroupBoxFlat() {
+    if (g_flatGroupBoxDepth <= 0) return;
+    g_flatGroupBoxDepth--;
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar(3);
+    ImGui::PopStyleColor(2);
+    ImGui::PopID();
+
+    ImGui::Spacing();
+}
+
+//-----------------------------------------------------------------------------
+// Nested GroupBox - Darker background for sub-sections
+//-----------------------------------------------------------------------------
+
+static int g_nestedGroupBoxDepth = 0;
+
+bool BeginGroupBoxNested(const char* label, const ImVec2& size) {
+    return BeginGroupBoxNestedEx(nullptr, label, size);
+}
+
+bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& size) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+
+    // Calculate actual size
+    ImVec2 contentSize = size;
+    if (contentSize.x <= 0) contentSize.x = ImGui::GetContentRegionAvail().x;
+    if (contentSize.y <= 0) contentSize.y = 0; // Will auto-resize
+
+    g_nestedGroupBoxDepth++;
+
+    ImGui::PushID(id);
+
+    // Darker background color for nested sections
+    ImVec4 nestedBgColor = ImVec4(25.0f/255.0f, 28.0f/255.0f, 35.0f/255.0f, 0.8f);
+
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, nestedBgColor);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f); // Slightly smaller corners
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(sizes.FramePadding, sizes.FramePadding));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
+
+    ImGui::BeginChild(label, contentSize, ImGuiChildFlags_AutoResizeY);
+
+    if (window->SkipItems) {
+        return true;
+    }
+
+    // Draw title text if provided (smaller, secondary style)
+    if (label && label[0]) {
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 windowPos = ImGui::GetWindowPos();
+
+        float textY = windowPos.y + sizes.FramePadding;
+
+        if (icon && icon[0]) {
+            char fullLabel[256];
+            snprintf(fullLabel, sizeof(fullLabel), "%s  %s", icon, label);
+            drawList->AddText(
+                ImVec2(windowPos.x + sizes.FramePadding, textY),
+                ColorToU32(colors.TextSecondary),
+                fullLabel
+            );
+        } else {
+            drawList->AddText(
+                ImVec2(windowPos.x + sizes.FramePadding, textY),
+                ColorToU32(colors.TextSecondary),
+                label
+            );
+        }
+
+        // Move cursor below title
+        ImGui::SetCursorPosY(ImGui::GetFontSize() + sizes.FramePadding * 1.5f);
+    }
+
+    return true;
+}
+
+void EndGroupBoxNested() {
+    if (g_nestedGroupBoxDepth <= 0) return;
+    g_nestedGroupBoxDepth--;
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar(3);
+    ImGui::PopStyleColor(2);
+    ImGui::PopID();
+
+    ImGui::Spacing();
+}
+
+//-----------------------------------------------------------------------------
 // Toggle Switch
 //-----------------------------------------------------------------------------
 
@@ -1211,6 +1379,220 @@ int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, i
                 result = i;
             }
         }
+    }
+
+    return result;
+}
+
+//-----------------------------------------------------------------------------
+// Pill Tabs - Capsule-shaped container with underline indicator
+//-----------------------------------------------------------------------------
+
+int TabBarPill(const char* id, const char** labels, int count, int current) {
+    return TabBarPillIcon(id, nullptr, labels, count, current);
+}
+
+int TabBarPillIcon(const char* id, const char** icons, const char** labels, int count, int current) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return current;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID tabId = window->GetID(id);
+    ImVec2 pos = window->DC.CursorPos;
+
+    ImDrawList* dl = window->DrawList;
+    int result = current;
+
+    // Calculate total width based on content
+    float tabH = sizes.TabSmallHeight + 4.0f; // Slightly taller
+    float tabPadding = 20.0f;
+    float tabSpacing = 4.0f;
+
+    // Calculate each tab width
+    std::vector<float> tabWidths(count);
+    float totalContentWidth = 0;
+
+    for (int i = 0; i < count; i++) {
+        char fullText[128];
+        if (icons && icons[i] && labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s %s", icons[i], labels[i]);
+        } else if (labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s", labels[i]);
+        } else {
+            fullText[0] = '\0';
+        }
+        ImVec2 textSize = ImGui::CalcTextSize(fullText);
+        tabWidths[i] = textSize.x + tabPadding * 2;
+        totalContentWidth += tabWidths[i];
+    }
+    totalContentWidth += (count - 1) * tabSpacing;
+
+    // Pill background - capsule shape
+    float pillPadding = 4.0f;
+    float totalW = totalContentWidth + pillPadding * 2;
+    float pillH = tabH + pillPadding * 2;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + pillH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, tabId)) return current;
+
+    // Draw pill background (capsule shape with large rounding)
+    float pillRounding = pillH * 0.5f;
+    dl->AddRectFilled(pos, ImVec2(pos.x + totalW, pos.y + pillH),
+                      IM_COL32(40, 45, 55, 200), pillRounding);
+
+    // Draw tabs inside pill
+    float tabX = pos.x + pillPadding;
+    float tabY = pos.y + pillPadding;
+
+    for (int i = 0; i < count; i++) {
+        float tabW = tabWidths[i];
+        ImVec2 tabPos(tabX, tabY);
+        ImRect tabBB(tabPos, ImVec2(tabPos.x + tabW, tabPos.y + tabH));
+
+        bool isActive = (i == current);
+        bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
+
+        // Hover effect
+        if (hovered && !isActive) {
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 15), tabH * 0.5f);
+        }
+
+        // Underline indicator for active tab
+        if (isActive) {
+            float indicatorY = tabBB.Max.y - 3.0f;
+            float indicatorPadding = 8.0f;
+            dl->AddRectFilled(
+                ImVec2(tabBB.Min.x + indicatorPadding, indicatorY),
+                ImVec2(tabBB.Max.x - indicatorPadding, tabBB.Max.y),
+                ColorToU32(colors.Primary),
+                1.5f
+            );
+        }
+
+        // Build label text
+        char fullText[128];
+        if (icons && icons[i] && labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s %s", icons[i], labels[i]);
+        } else if (labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s", labels[i]);
+        } else {
+            fullText[0] = '\0';
+        }
+
+        ImVec2 textSize = ImGui::CalcTextSize(fullText);
+        float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
+        float textY = tabPos.y + (tabH - textSize.y) * 0.5f;
+
+        ImU32 textColor = isActive ? ColorToU32(colors.Text) : ColorToU32(colors.TextSecondary);
+        dl->AddText(ImVec2(textX, textY), textColor, fullText);
+
+        if (hovered && ImGui::IsMouseClicked(0)) {
+            result = i;
+        }
+
+        tabX += tabW + tabSpacing;
+    }
+
+    return result;
+}
+
+//-----------------------------------------------------------------------------
+// Button Tabs - Simple button-style tabs with semi-transparent selection
+//-----------------------------------------------------------------------------
+
+int TabBarButton(const char* id, const char** labels, int count, int current) {
+    return TabBarButtonIcon(id, nullptr, labels, count, current);
+}
+
+int TabBarButtonIcon(const char* id, const char** icons, const char** labels, int count, int current) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return current;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID tabId = window->GetID(id);
+    ImVec2 pos = window->DC.CursorPos;
+
+    ImDrawList* dl = window->DrawList;
+    int result = current;
+
+    // Calculate total width based on content
+    float tabH = sizes.TabSmallHeight;
+    float tabPadding = 16.0f;
+    float tabSpacing = 8.0f;
+
+    // Calculate each tab width
+    std::vector<float> tabWidths(count);
+    float totalContentWidth = 0;
+
+    for (int i = 0; i < count; i++) {
+        char fullText[128];
+        if (icons && icons[i] && labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s %s", icons[i], labels[i]);
+        } else if (labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s", labels[i]);
+        } else {
+            fullText[0] = '\0';
+        }
+        ImVec2 textSize = ImGui::CalcTextSize(fullText);
+        tabWidths[i] = textSize.x + tabPadding * 2;
+        totalContentWidth += tabWidths[i];
+    }
+    totalContentWidth += (count - 1) * tabSpacing;
+
+    float totalW = totalContentWidth;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + tabH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, tabId)) return current;
+
+    // Draw tabs
+    float tabX = pos.x;
+
+    for (int i = 0; i < count; i++) {
+        float tabW = tabWidths[i];
+        ImVec2 tabPos(tabX, pos.y);
+        ImRect tabBB(tabPos, ImVec2(tabPos.x + tabW, tabPos.y + tabH));
+
+        bool isActive = (i == current);
+        bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
+
+        // Button background
+        float btnRounding = 6.0f;
+        if (isActive) {
+            // Semi-transparent primary color for active
+            ImVec4 activeColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.3f);
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, ColorToU32(activeColor), btnRounding);
+        } else if (hovered) {
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 20), btnRounding);
+        }
+
+        // Build label text
+        char fullText[128];
+        if (icons && icons[i] && labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s %s", icons[i], labels[i]);
+        } else if (labels && labels[i]) {
+            snprintf(fullText, sizeof(fullText), "%s", labels[i]);
+        } else {
+            fullText[0] = '\0';
+        }
+
+        ImVec2 textSize = ImGui::CalcTextSize(fullText);
+        float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
+        float textY = tabPos.y + (tabH - textSize.y) * 0.5f;
+
+        ImU32 textColor = isActive ? ColorToU32(colors.Text) : ColorToU32(colors.TextSecondary);
+        dl->AddText(ImVec2(textX, textY), textColor, fullText);
+
+        if (hovered && ImGui::IsMouseClicked(0)) {
+            result = i;
+        }
+
+        tabX += tabW + tabSpacing;
     }
 
     return result;

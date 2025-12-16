@@ -152,6 +152,18 @@ bool BeginGroupBoxGlass(const char* label, const ImVec2& size = ImVec2(0, 0), co
 bool BeginGroupBoxExGlass(const char* icon, const char* label, const ImVec2& size = ImVec2(0, 0), const GlassConfig& config = GlassConfig());
 void EndGroupBoxGlass();
 
+// Flat GroupBox variants - Minimalist style with no header bar, just text title
+// Light gray background, no border, large rounded corners
+bool BeginGroupBoxFlat(const char* label, const ImVec2& size = ImVec2(0, 0));
+bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size = ImVec2(0, 0));
+void EndGroupBoxFlat();
+
+// Nested GroupBox - Darker background for sub-sections within Flat GroupBox
+// Use inside BeginGroupBoxFlat for hierarchical grouping
+bool BeginGroupBoxNested(const char* label, const ImVec2& size = ImVec2(0, 0));
+bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& size = ImVec2(0, 0));
+void EndGroupBoxNested();
+
 // Toggle Switch - Mobile-style on/off switch (text left, switch right)
 bool ToggleSwitch(const char* label, bool* v);
 bool ToggleSwitchEx(const char* label, bool* v, const ImVec4& onColor, const ImVec4& offColor);
@@ -200,6 +212,16 @@ int TabBarSmall(const char* id, const char** labels, int count, int current);
 int TabBarSmallIcon(const char* id, const char** icons, const char** labels, int count, int current);
 int TabBarSmallEx(const char* id, const char** labels, int count, int current, const SmallTabStyle& style);
 int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, int count, int current, const SmallTabStyle& style);
+
+// Pill tabs - Capsule-shaped container with underline indicator for selected item
+// Used for main navigation in NEXO-style menus
+int TabBarPill(const char* id, const char** labels, int count, int current);
+int TabBarPillIcon(const char* id, const char** icons, const char** labels, int count, int current);
+
+// Button tabs - Simple button-style tabs with semi-transparent background on selection
+// Used for secondary navigation within sections
+int TabBarButton(const char* id, const char** labels, int count, int current);
+int TabBarButtonIcon(const char* id, const char** icons, const char** labels, int count, int current);
 
 // RadioButton - Two styles
 // Segmented control (horizontal tab-like buttons)

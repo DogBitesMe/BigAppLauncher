@@ -23,6 +23,7 @@ Application::Application() {
     m_loginScreen = std::make_unique<LoginScreen>();
     m_productsScreen = std::make_unique<ProductsScreen>();
     m_guiMenuScreen = std::make_unique<GUIMenuScreen>();
+    m_largeDemoScreen = std::make_unique<LargeDemoScreen>();
     m_hudOverlay = std::make_unique<HUDOverlay>();
     m_debugController = std::make_unique<DebugController>();
 }
@@ -566,15 +567,33 @@ void Application::Render() {
                 m_hudOverlay->Render(m_width, m_height);
             }
 
-            // Render GUI menu
-            if (m_guiMenuScreen) {
-                m_guiMenuScreen->SetWindowControlCallback([this](int action) {
-                    if (action == 1) {
-                        // Close goes back to Products
-                        m_state = AppState::Products;
-                    }
-                });
-                m_guiMenuScreen->Render(m_width, m_height);
+            // Render appropriate menu based on mode
+            if (m_useLargeMenu) {
+                // Large Demo Screen (NEXO style)
+                if (m_largeDemoScreen) {
+                    m_largeDemoScreen->SetWindowControlCallback([this](int action) {
+                        if (action == 1) {
+                            // Close goes back to Products
+                            m_state = AppState::Products;
+                        }
+                    });
+                    m_largeDemoScreen->SetSwitchToComponentDemoCallback([this]() {
+                        // Switch to widget demo (old GUIMenuScreen)
+                        m_useLargeMenu = false;
+                    });
+                    m_largeDemoScreen->Render(m_width, m_height);
+                }
+            } else {
+                // Old GUI menu (widget demo)
+                if (m_guiMenuScreen) {
+                    m_guiMenuScreen->SetWindowControlCallback([this](int action) {
+                        if (action == 1) {
+                            // Close goes back to Large Demo Screen
+                            m_useLargeMenu = true;
+                        }
+                    });
+                    m_guiMenuScreen->Render(m_width, m_height);
+                }
             }
             break;
     }

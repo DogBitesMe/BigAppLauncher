@@ -23,6 +23,7 @@ set(SOURCES
     ui/screens/LoginScreen.cpp
     ui/screens/ProductsScreen.cpp
     ui/screens/GUIMenuScreen.cpp
+    ui/screens/LargeDemoScreen.cpp
 
     # i18n
     i18n/Localization.cpp
@@ -50,6 +51,7 @@ set(HEADERS
     ui/screens/LoginScreen.h
     ui/screens/ProductsScreen.h
     ui/screens/GUIMenuScreen.h
+    ui/screens/LargeDemoScreen.h
 
     # i18n
     i18n/Localization.h

@@ -6,6 +6,7 @@
 #include "ui/screens/LoginScreen.h"
 #include "ui/screens/ProductsScreen.h"
 #include "ui/screens/GUIMenuScreen.h"
+#include "ui/screens/LargeDemoScreen.h"
 #include "ui/DebugController.h"
 #include "ui/HUDOverlay.h"
 #include <Windows.h>
@@ -54,7 +55,11 @@ private:
     std::unique_ptr<LoginScreen> m_loginScreen;
     std::unique_ptr<ProductsScreen> m_productsScreen;
     std::unique_ptr<GUIMenuScreen> m_guiMenuScreen;
+    std::unique_ptr<LargeDemoScreen> m_largeDemoScreen;
     std::unique_ptr<HUDOverlay> m_hudOverlay;
+
+    // Menu mode: true = LargeDemoScreen, false = GUIMenuScreen (widgets demo)
+    bool m_useLargeMenu = true;
 
     // Debug
     std::unique_ptr<DebugController> m_debugController;
