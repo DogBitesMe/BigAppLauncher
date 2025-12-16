@@ -105,9 +105,10 @@ void LargeDemoScreen::RenderHeader(float width) {
     drawList->AddText(ImVec2(logoX + 60 + brandSize.x, logoY), IM_COL32(150, 150, 150, 255), gameName);
 
     // Main tabs (Pill style) - centered
-    ImGui::SetCursorPos(ImVec2(width * 0.30f, 10));
-
     const char* mainTabs[] = { "Aimbot", "Visual", "Misc", "Settings" };
+    float tabBarWidth = StyleUI::TabBarPillCalcWidth(mainTabs, 4);
+    ImGui::SetCursorPos(ImVec2((width - tabBarWidth) * 0.5f, 10));
+
     m_mainTabIndex = StyleUI::TabBarPill("##MainTabs", mainTabs, 4, m_mainTabIndex);
     m_currentMainTab = static_cast<MainTab>(m_mainTabIndex);
 

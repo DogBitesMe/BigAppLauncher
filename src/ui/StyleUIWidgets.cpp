@@ -1404,6 +1404,23 @@ int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, i
 // Pill Tabs - Capsule-shaped container with underline indicator
 //-----------------------------------------------------------------------------
 
+float TabBarPillCalcWidth(const char** labels, int count) {
+    const auto& sizes = GetSizeConfig();
+    float tabH = sizes.TabSmallHeight - 4.0f;
+    float tabPadding = 14.0f;
+    float tabSpacing = 2.0f;
+    float pillPadding = 3.0f;
+
+    float totalContentWidth = 0;
+    for (int i = 0; i < count; i++) {
+        ImVec2 textSize = ImGui::CalcTextSize(labels[i]);
+        totalContentWidth += textSize.x + tabPadding * 2;
+    }
+    totalContentWidth += (count - 1) * tabSpacing;
+
+    return totalContentWidth + pillPadding * 2;
+}
+
 int TabBarPill(const char* id, const char** labels, int count, int current) {
     return TabBarPillIcon(id, nullptr, labels, count, current);
 }
@@ -1476,12 +1493,26 @@ int TabBarPillIcon(const char* id, const char** icons, const char** labels, int 
             dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(255, 255, 255, 15), tabH * 0.5f);
         }
 
-        // Underline indicator for active tab - shorter with gradient (center slightly bright)
+        // Underline indicator for active tab - with pulsing animation
         if (isActive) {
             float indicatorY = tabBB.Max.y - 2.5f;
             float indicatorPadding = tabW * 0.25f; // 25% padding on each side
-            ImU32 gradEdge = ColorToU32(ImVec4(colors.Primary.x * 0.6f, colors.Primary.y * 0.6f, colors.Primary.z * 0.6f, 0.7f));
-            ImU32 gradCenter = ColorToU32(colors.Primary);
+
+            // Pulsing animation: brightness oscillates between 0.7 and 1.3
+            float time = (float)ImGui::GetTime();
+            float pulse = 0.85f + 0.15f * sinf(time * 3.0f); // 3.0 = speed of pulse
+
+            ImU32 gradEdge = ColorToU32(ImVec4(
+                colors.Primary.x * 0.6f * pulse,
+                colors.Primary.y * 0.6f * pulse,
+                colors.Primary.z * 0.6f * pulse,
+                0.7f));
+            ImU32 gradCenter = ColorToU32(ImVec4(
+                fminf(colors.Primary.x * pulse, 1.0f),
+                fminf(colors.Primary.y * pulse, 1.0f),
+                fminf(colors.Primary.z * pulse, 1.0f),
+                colors.Primary.w));
+
             float indicatorLeft = tabBB.Min.x + indicatorPadding;
             float indicatorRight = tabBB.Max.x - indicatorPadding;
             float indicatorMid = (indicatorLeft + indicatorRight) * 0.5f;

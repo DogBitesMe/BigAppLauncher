@@ -217,6 +217,7 @@ int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, i
 // Used for main navigation in NEXO-style menus
 int TabBarPill(const char* id, const char** labels, int count, int current);
 int TabBarPillIcon(const char* id, const char** icons, const char** labels, int count, int current);
+float TabBarPillCalcWidth(const char** labels, int count);  // Calculate total width for centering
 
 // Button tabs - Simple button-style tabs with semi-transparent background on selection
 // Used for secondary navigation within sections
