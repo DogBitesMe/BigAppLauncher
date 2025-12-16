@@ -363,10 +363,15 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
         // Content based on sub-tab
         if (m_aimbotSubTab == 0) {
             // General tab - three column layout
-            float availWidth = ImGui::GetContentRegionAvail().x;
-            float availHeight = ImGui::GetContentRegionAvail().y;
-            float colSpacing = 8.0f;
+            float parentPadding = 12.0f;  // Padding from parent GroupBox
+            float colSpacing = 16.0f;     // Space between columns
+
+            float availWidth = ImGui::GetContentRegionAvail().x - parentPadding * 2;
+            float availHeight = ImGui::GetContentRegionAvail().y - parentPadding;
             float colWidth = (availWidth - colSpacing * 2) / 3.0f;
+
+            // Add left padding
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + parentPadding);
 
             // Column 1: Target Settings (外層 BeginChild 控制布局)
             ImGui::BeginChild("##GenCol1", ImVec2(colWidth, availHeight), false,
