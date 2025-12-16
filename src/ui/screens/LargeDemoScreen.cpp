@@ -254,41 +254,59 @@ void LargeDemoScreen::RenderFooter(float width, float y) {
 void LargeDemoScreen::RenderContent(float width, float height) {
     ImGui::SetCursorPos(ImVec2(PADDING, HEADER_HEIGHT + 10));
 
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-    ImGui::BeginChild("##Content", ImVec2(width - PADDING * 2, height - 20), false);
+    // Content area height - leave space for footer
+    float contentHeight = height - 10;
+
+    // Debug border for content area
+    if (DEBUG_SHOW_BORDERS) {
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1, 0, 0, 1));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 2.0f);
+    }
+    ImGui::BeginChild("##Content", ImVec2(width - PADDING * 2, contentHeight),
+        DEBUG_SHOW_BORDERS ? ImGuiChildFlags_Borders : ImGuiChildFlags_None,
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     switch (m_currentMainTab) {
         case MainTab::Aimbot:
-            RenderAimbotTab(width - PADDING * 2, height - 20);
+            RenderAimbotTab(width - PADDING * 2, contentHeight);
             break;
         case MainTab::Visual:
-            RenderVisualTab(width - PADDING * 2, height - 20);
+            RenderVisualTab(width - PADDING * 2, contentHeight);
             break;
         case MainTab::Misc:
-            RenderMiscTab(width - PADDING * 2, height - 20);
+            RenderMiscTab(width - PADDING * 2, contentHeight);
             break;
         case MainTab::Settings:
-            RenderSettingsTab(width - PADDING * 2, height - 20);
+            RenderSettingsTab(width - PADDING * 2, contentHeight);
             break;
     }
 
     ImGui::EndChild();
-    ImGui::PopStyleColor();
+    if (DEBUG_SHOW_BORDERS) {
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor(2);
+    }
 }
 
 void LargeDemoScreen::RenderAimbotTab(float width, float height) {
     // Two-column layout with fixed height
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
-    float contentHeight = height - 8.0f;  // Reduce more to eliminate scroll
 
-    // Calculate box heights - left has 2 boxes with spacing, right has 1 box
-    float spacing = 8.0f;  // EndGroupBoxFlat adds Spacing
-    float boxHeight = (contentHeight - spacing) / 2.0f;  // Split height for two boxes
-    float rightBoxHeight = contentHeight;  // Right box uses full height
+    // Use most of the available height
+    float contentHeight = height - 5.0f;
+    float boxHeight = (contentHeight - 15.0f) / 2.0f;  // Two boxes with spacing between
+    float rightBoxHeight = contentHeight;  // Right box matches left column height
 
-    // Left column - two Flat GroupBoxes (no nested boxes)
-    ImGui::BeginChild("##AimbotLeft", ImVec2(leftWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar);
+    // Debug: Green border for left column
+    if (DEBUG_SHOW_BORDERS) {
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 1, 0, 1));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 2.0f);
+    }
+    ImGui::BeginChild("##AimbotLeft", ImVec2(leftWidth, contentHeight),
+        DEBUG_SHOW_BORDERS ? ImGuiChildFlags_Borders : ImGuiChildFlags_None,
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     // Upper Box - Aimbot Settings
     if (StyleUI::BeginGroupBoxFlat("Aimbot", ImVec2(0, boxHeight))) {
@@ -316,10 +334,22 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
     }
 
     ImGui::EndChild();
+    if (DEBUG_SHOW_BORDERS) {
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+    }
 
     // Right column - fixed height, Tab inside GroupBox
     ImGui::SameLine();
-    ImGui::BeginChild("##AimbotRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar);
+
+    // Debug: Blue border for right column
+    if (DEBUG_SHOW_BORDERS) {
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 1, 1));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 2.0f);
+    }
+    ImGui::BeginChild("##AimbotRight", ImVec2(rightWidth, contentHeight),
+        DEBUG_SHOW_BORDERS ? ImGuiChildFlags_Borders : ImGuiChildFlags_None,
+        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (StyleUI::BeginGroupBoxFlat("Configuration", ImVec2(0, rightBoxHeight))) {
         // Sub-tabs inside GroupBox
@@ -360,17 +390,22 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
     }
 
     ImGui::EndChild();
+    if (DEBUG_SHOW_BORDERS) {
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+    }
 }
 
 void LargeDemoScreen::RenderVisualTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
-    float contentHeight = height - 2.0f;  // Slightly smaller to avoid scrollbar
+    float contentHeight = height - 5.0f;
+    float boxHeight = contentHeight;
 
     // Left column - fixed height
-    ImGui::BeginChild("##VisualLeft", ImVec2(leftWidth, contentHeight), false);
+    ImGui::BeginChild("##VisualLeft", ImVec2(leftWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-    if (StyleUI::BeginGroupBoxFlat("ESP", ImVec2(0, contentHeight))) {
+    if (StyleUI::BeginGroupBoxFlat("ESP", ImVec2(0, boxHeight))) {
 
         if (StyleUI::BeginGroupBoxNested("Toggle")) {
             StyleUI::ToggleSwitch("Enable ESP", &m_espEnabled);
@@ -399,9 +434,9 @@ void LargeDemoScreen::RenderVisualTab(float width, float height) {
 
     // Right column - fixed height, Tab inside GroupBox
     ImGui::SameLine();
-    ImGui::BeginChild("##VisualRight", ImVec2(rightWidth, contentHeight), false);
+    ImGui::BeginChild("##VisualRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-    if (StyleUI::BeginGroupBoxFlat("Visual Settings", ImVec2(0, contentHeight))) {
+    if (StyleUI::BeginGroupBoxFlat("Visual Settings", ImVec2(0, boxHeight))) {
         const char* subTabs[] = { "Colors", "Chams", "World" };
         m_visualSubTab = StyleUI::TabBarButton("##VisualSubTabs", subTabs, 3, m_visualSubTab);
 
@@ -453,12 +488,13 @@ void LargeDemoScreen::RenderVisualTab(float width, float height) {
 void LargeDemoScreen::RenderMiscTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
-    float contentHeight = height - 2.0f;  // Slightly smaller to avoid scrollbar
+    float contentHeight = height - 5.0f;
+    float boxHeight = contentHeight;
 
     // Left column - fixed height
-    ImGui::BeginChild("##MiscLeft", ImVec2(leftWidth, contentHeight), false);
+    ImGui::BeginChild("##MiscLeft", ImVec2(leftWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-    if (StyleUI::BeginGroupBoxFlat("Misc", ImVec2(0, contentHeight))) {
+    if (StyleUI::BeginGroupBoxFlat("Misc", ImVec2(0, boxHeight))) {
 
         if (StyleUI::BeginGroupBoxNested("Movement")) {
             StyleUI::ToggleSwitch("Bunny Hop", &m_bunnyHop);
@@ -483,9 +519,9 @@ void LargeDemoScreen::RenderMiscTab(float width, float height) {
 
     // Right column - fixed height, Tab inside GroupBox
     ImGui::SameLine();
-    ImGui::BeginChild("##MiscRight", ImVec2(rightWidth, contentHeight), false);
+    ImGui::BeginChild("##MiscRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-    if (StyleUI::BeginGroupBoxFlat("Misc Settings", ImVec2(0, contentHeight))) {
+    if (StyleUI::BeginGroupBoxFlat("Misc Settings", ImVec2(0, boxHeight))) {
         const char* subTabs[] = { "Radar", "Skins", "Other" };
         m_miscSubTab = StyleUI::TabBarButton("##MiscSubTabs", subTabs, 3, m_miscSubTab);
 
@@ -523,12 +559,13 @@ void LargeDemoScreen::RenderMiscTab(float width, float height) {
 void LargeDemoScreen::RenderSettingsTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
     float rightWidth = width - leftWidth - PADDING;
-    float contentHeight = height - 2.0f;  // Slightly smaller to avoid scrollbar
+    float contentHeight = height - 5.0f;
+    float boxHeight = contentHeight;
 
     // Left column - fixed height
-    ImGui::BeginChild("##SettingsLeft", ImVec2(leftWidth, contentHeight), false);
+    ImGui::BeginChild("##SettingsLeft", ImVec2(leftWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-    if (StyleUI::BeginGroupBoxFlat("Config", ImVec2(0, contentHeight))) {
+    if (StyleUI::BeginGroupBoxFlat("Config", ImVec2(0, boxHeight))) {
 
         if (StyleUI::BeginGroupBoxNested("Auto Save")) {
             StyleUI::ToggleSwitch("Save on Exit", &m_saveOnExit);
@@ -554,9 +591,9 @@ void LargeDemoScreen::RenderSettingsTab(float width, float height) {
 
     // Right column - fixed height, Tab inside GroupBox
     ImGui::SameLine();
-    ImGui::BeginChild("##SettingsRight", ImVec2(rightWidth, contentHeight), false);
+    ImGui::BeginChild("##SettingsRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-    if (StyleUI::BeginGroupBoxFlat("Settings", ImVec2(0, contentHeight))) {
+    if (StyleUI::BeginGroupBoxFlat("Settings", ImVec2(0, boxHeight))) {
         const char* subTabs[] = { "Theme", "Language", "About" };
         m_settingsSubTab = StyleUI::TabBarButton("##SettingsSubTabs", subTabs, 3, m_settingsSubTab);
 
