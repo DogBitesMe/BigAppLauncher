@@ -58,6 +58,7 @@ private:
     float m_aimbotSmooth = 5.0f;
     int m_aimbotBoneIndex = 0;  // 0=Head, 1=Neck, 2=Chest
     int m_aimbotKeyIndex = 0;
+    int m_targetPriority = 0;   // OptionRow demo: 0=Distance, 1=Crosshair, 2=Health, 3=Visibility
     StyleUI::HotkeyBinding m_aimbotKey = { 0x02, false, false, false }; // Right mouse
     float m_aimSpeed = 5.0f;
     float m_aimAcceleration = 2.0f;

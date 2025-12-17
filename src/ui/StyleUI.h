@@ -247,6 +247,17 @@ int SubTabIcon(const char* id, const char** icons, const char** labels, int coun
 // Hotkey Input
 bool HotkeyInput(const char* label, HotkeyBinding* binding);
 
+// OptionRow - Single selection from text options (TabBarPill-like style with label)
+// Displays a label above a row of text options, selected option has background highlight
+struct OptionItem {
+    int value;
+    const char* text;
+};
+
+// Returns true if selection changed
+bool OptionRow(const char* label, int* selected, const OptionItem* items, int count);
+bool OptionRowEx(const char* label, int* selected, const OptionItem* items, int count, float maxWidth);
+
 // TextInput - Text input field with configurable label placement
 enum class TextInputLabelMode {
     Above,      // Label above input field

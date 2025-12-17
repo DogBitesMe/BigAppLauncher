@@ -34,6 +34,15 @@ static ImU32 GetGradientColor(const ImVec4& top, const ImVec4& bottom, float t) 
     return ColorToU32(LerpColor(top, bottom, t));
 }
 
+static ImVec4 LightenColor(const ImVec4& c, float amt) {
+    return ImVec4(
+        ImMin(c.x + amt, 1.0f),
+        ImMin(c.y + amt, 1.0f),
+        ImMin(c.z + amt, 1.0f),
+        c.w
+    );
+}
+
 //-----------------------------------------------------------------------------
 // Glass Effect Drawing
 //-----------------------------------------------------------------------------
@@ -3051,6 +3060,186 @@ void LabelValue(const char* label, const char* value) {
     dl->AddText(ImVec2(pos.x + totalW - valueSize.x, pos.y), ColorToU32(colors.TextSecondary), value);
 
     ImGui::ItemSize(ImVec2(totalW, rowH));
+}
+
+//-----------------------------------------------------------------------------
+// OptionRow - Single selection from text options (TabBarPill-like style)
+//-----------------------------------------------------------------------------
+
+bool OptionRow(const char* label, int* selected, const OptionItem* items, int count) {
+    return OptionRowEx(label, selected, items, count, 0.0f);
+}
+
+bool OptionRowEx(const char* label, int* selected, const OptionItem* items, int count, float maxWidth) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+    float availWidth = maxWidth > 0.0f ? maxWidth : ImGui::GetContentRegionAvail().x;
+
+    // Constants (similar to TabBarPill)
+    const float labelSpacing = 4.0f;
+    const float optionPadding = 12.0f;
+    const float minOptionSpacing = 4.0f;
+    const float containerPadding = 4.0f;
+    const float rowHeight = 26.0f;
+    const float rowSpacing = 4.0f;
+    const float containerRadius = 6.0f;
+    const float selectRadius = 4.0f;
+
+    // Theme-aware colors
+    ImVec4 containerBg = LightenColor(colors.Background, 0.08f);
+    containerBg.w = 0.8f;
+    ImVec4 selectedBg = LightenColor(colors.Background, 0.15f);
+    selectedBg.w = 0.7f;
+
+    ImDrawList* dl = window->DrawList;
+    bool changed = false;
+
+    // Draw label
+    float labelHeight = ImGui::GetFontSize();
+    dl->AddText(pos, ColorToU32(colors.TextSecondary), label);
+
+    // Calculate item widths and row breaks
+    std::vector<float> itemWidths(count);
+    std::vector<int> rowBreaks;  // indices where new row starts
+    float currentRowWidth = containerPadding;
+    float contentWidth = availWidth - containerPadding * 2;
+
+    for (int i = 0; i < count; i++) {
+        float textW = ImGui::CalcTextSize(items[i].text).x;
+        float itemW = textW + optionPadding * 2;
+        itemWidths[i] = itemW;
+
+        if (currentRowWidth + itemW > contentWidth && currentRowWidth > containerPadding) {
+            rowBreaks.push_back(i);
+            currentRowWidth = 0;
+        }
+        currentRowWidth += itemW + minOptionSpacing;
+    }
+
+    int numRows = (int)rowBreaks.size() + 1;
+    float containerHeight = numRows * rowHeight + (numRows - 1) * rowSpacing + containerPadding * 2;
+
+    // Container position (below label)
+    ImVec2 containerPos(pos.x, pos.y + labelHeight + labelSpacing);
+    ImRect containerBB(containerPos, ImVec2(containerPos.x + availWidth, containerPos.y + containerHeight));
+
+    // Draw container background
+    dl->AddRectFilled(containerBB.Min, containerBB.Max, ColorToU32(containerBg), containerRadius);
+
+    // Calculate items per row and distribute spacing evenly
+    std::vector<int> itemsPerRow;
+    int rowStart = 0;
+    for (int b = 0; b < (int)rowBreaks.size(); b++) {
+        itemsPerRow.push_back(rowBreaks[b] - rowStart);
+        rowStart = rowBreaks[b];
+    }
+    itemsPerRow.push_back(count - rowStart);  // Last row
+
+    // Draw items with even distribution per row
+    int result = *selected;
+    int itemIdx = 0;
+    float itemY = containerPos.y + containerPadding;
+
+    for (int row = 0; row < numRows; row++) {
+        int itemsInThisRow = itemsPerRow[row];
+
+        // Calculate total content width for this row
+        float rowContentWidth = 0;
+        for (int j = 0; j < itemsInThisRow; j++) {
+            rowContentWidth += itemWidths[itemIdx + j];
+        }
+
+        // Determine layout mode:
+        // 1. Single-row layout OR full row (>70% filled): use equal-width cells
+        // 2. Sparse row in multi-row layout: use minimum spacing, align left
+        bool isSingleRowLayout = (numRows == 1);
+        bool isRowFull = (rowContentWidth + minOptionSpacing * (itemsInThisRow - 1)) > contentWidth * 0.7f;
+        bool useEqualCells = isSingleRowLayout || isRowFull;
+
+        // Equal cell width for even distribution (with padding between cells)
+        float cellPadding = 2.0f;  // Padding on each side of a cell
+        float totalCellPadding = cellPadding * 2 * itemsInThisRow;  // Total padding space
+        float cellWidth = (contentWidth - totalCellPadding) / itemsInThisRow + cellPadding * 2;
+        float cellInnerWidth = cellWidth - cellPadding * 2;  // Actual drawable area
+
+        for (int j = 0; j < itemsInThisRow; j++) {
+            int i = itemIdx + j;
+            float itemW = itemWidths[i];
+
+            // Calculate cell and item position
+            float cellX, cellW, drawX, drawW;
+            if (useEqualCells) {
+                // Equal-width cells with padding
+                cellX = containerPos.x + containerPadding + j * cellWidth;
+                cellW = cellWidth;
+                drawX = cellX + cellPadding;  // Inner drawable area
+                drawW = cellInnerWidth;
+            } else {
+                // Minimum spacing, align left - cell width equals item width
+                float offsetX = 0;
+                for (int k = 0; k < j; k++) {
+                    offsetX += itemWidths[itemIdx + k] + minOptionSpacing;
+                }
+                cellX = containerPos.x + containerPadding + offsetX;
+                cellW = itemW;
+                drawX = cellX;
+                drawW = cellW;
+            }
+
+            // Draw bounding box (inner area with padding)
+            ImVec2 drawPos(drawX, itemY);
+            ImRect drawBB(drawPos, ImVec2(drawPos.x + drawW, drawPos.y + rowHeight));
+
+            // Click detection uses the full cell area
+            ImVec2 cellPos(cellX, itemY);
+            ImRect cellBB(cellPos, ImVec2(cellPos.x + cellW, cellPos.y + rowHeight));
+
+            bool isSelected = (items[i].value == *selected);
+            bool hovered = ImGui::IsMouseHoveringRect(cellBB.Min, cellBB.Max);
+
+            // Draw selected/hover background - fills the drawable area (with padding)
+            if (isSelected) {
+                dl->AddRectFilled(drawBB.Min, drawBB.Max, ColorToU32(selectedBg), selectRadius);
+            } else if (hovered) {
+                dl->AddRectFilled(drawBB.Min, drawBB.Max, IM_COL32(255, 255, 255, 15), selectRadius);
+            }
+
+            // Draw text centered within drawable area
+            ImVec2 textSize = ImGui::CalcTextSize(items[i].text);
+            ImVec2 textPos(
+                drawPos.x + (drawW - textSize.x) * 0.5f,
+                drawPos.y + (rowHeight - textSize.y) * 0.5f
+            );
+            ImU32 textColor = isSelected ? ColorToU32(colors.Text) : ColorToU32(colors.TextSecondary);
+            dl->AddText(textPos, textColor, items[i].text);
+
+            // Handle click on entire cell
+            if (hovered && ImGui::IsMouseClicked(0)) {
+                result = items[i].value;
+                changed = true;
+            }
+        }
+
+        itemIdx += itemsInThisRow;
+        itemY += rowHeight + rowSpacing;
+    }
+
+    // Total widget height
+    float totalHeight = labelHeight + labelSpacing + containerHeight;
+    ImRect bb(pos, ImVec2(pos.x + availWidth, pos.y + totalHeight));
+    ImGui::ItemSize(bb);
+    ImGui::ItemAdd(bb, id);
+
+    if (changed) {
+        *selected = result;
+    }
+
+    return changed;
 }
 
 } // namespace StyleUI

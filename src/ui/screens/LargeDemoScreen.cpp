@@ -396,8 +396,26 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
                 StyleUI::SliderFloat("Distance", &m_espMaxDistance, 100.0f, 1000.0f, "%.0f");
                 StyleUI::SliderFloat("Smooth", &m_aimbotSmooth, 1.0f, 20.0f, "%.1f");
                 ImGui::Separator();
-                const char* priorities[] = { "Distance", "Crosshair", "Health" };
-                StyleUI::Combo("Priority", &m_aimbotBoneIndex, priorities, 3);
+
+                // OptionRow demo - single selection from text options (multi-row test)
+                static StyleUI::OptionItem priorities[] = {
+                    {0, "Distance"},
+                    {1, "Crosshair"},
+                    {2, "Health"},
+                    {3, "Visibility"},
+                    {4, "Threat Level"},
+                    {5, "Random"}
+                };
+                StyleUI::OptionRow("Target Priority", &m_targetPriority, priorities, 6);
+
+                // OptionRow demo - two items only
+                static int aimMode = 0;
+                static StyleUI::OptionItem aimModes[] = {
+                    {0, "Legit"},
+                    {1, "Rage"}
+                };
+                StyleUI::OptionRow("Aim Mode", &aimMode, aimModes, 2);
+
                 const char* bones[] = { "Head", "Neck", "Chest", "Body" };
                 StyleUI::Combo("Target Bone", &m_aimbotBoneIndex, bones, 4);
                 ImGui::Separator();
