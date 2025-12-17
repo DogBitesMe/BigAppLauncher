@@ -330,12 +330,16 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     ImGui::PushStyleColor(ImGuiCol_ChildBg, flatBgColor);
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f); // Large rounded corners
+    // Outer container only needs padding for header area (X padding for title alignment)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
     // Outer container (no scroll) - holds header and content area
     ImGuiChildFlags outerFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
-    outerFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
+    // Don't force window padding on outer when we have inner content child
+    if (contentSize.y <= 0) {
+        outerFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
+    }
     ImGui::BeginChild(label, contentSize, outerFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (window->SkipItems) {
@@ -376,10 +380,10 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     }
 
     if (hasInnerChild) {
-        float innerHeight = contentSize.y - headerHeight - padY;
+        float innerHeight = contentSize.y - headerHeight;
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY)); // Content has padding
+        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_None);
         ImGui::PopStyleVar();
         ImGui::PopStyleColor();
     }
@@ -445,12 +449,16 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     ImGui::PushStyleColor(ImGuiCol_ChildBg, nestedBgColor);
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f); // Slightly smaller corners
+    // Outer container only needs padding for header area (X padding for title alignment)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
     // Outer container (no scroll) - holds header and content area
     ImGuiChildFlags outerFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
-    outerFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
+    // Don't force window padding on outer when we have inner content child
+    if (contentSize.y <= 0) {
+        outerFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
+    }
     ImGui::BeginChild(label, contentSize, outerFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (window->SkipItems) {
@@ -491,10 +499,10 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     }
 
     if (hasInnerChild) {
-        float innerHeight = contentSize.y - headerHeight - padY;
+        float innerHeight = contentSize.y - headerHeight;
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY)); // Content has padding
+        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_None);
         ImGui::PopStyleVar();
         ImGui::PopStyleColor();
     }
