@@ -2119,6 +2119,8 @@ int SubTabIcon(const char* id, const char** icons, const char** labels, int coun
 //-----------------------------------------------------------------------------
 
 static ImGuiID g_activeHotkeyId = 0;
+static bool g_waitingForMouseRelease = false;  // Wait for mouse button release before detecting
+static bool g_waitingForMouseReleaseAfterBind = false;  // Wait for mouse release after binding completes
 
 bool HotkeyInput(const char* label, HotkeyBinding* binding) {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -2145,6 +2147,13 @@ bool HotkeyInput(const char* label, HotkeyBinding* binding) {
     bool changed = false;
     bool isBinding = (g_activeHotkeyId == id);
 
+    // Check if we're waiting for mouse release after binding (to prevent re-triggering)
+    if (g_waitingForMouseReleaseAfterBind) {
+        if (!(GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
+            g_waitingForMouseReleaseAfterBind = false;  // Mouse released, allow clicking again
+        }
+    }
+
     // Label (left)
     float textY = pos.y + (rowH - labelSize.y) * 0.5f;
     dl->AddText(ImVec2(pos.x, textY), ColorToU32(colors.Text), label);
@@ -2167,54 +2176,73 @@ bool HotkeyInput(const char* label, HotkeyBinding* binding) {
     float btnTextY = pos.y + (rowH - textSize.y) * 0.5f;
     dl->AddText(ImVec2(btnTextX, btnTextY), ColorToU32(isBinding ? colors.Text : colors.TextSecondary), displayText);
 
-    // Handle button click to start binding
-    if (buttonHovered && ImGui::IsMouseClicked(0) && !isBinding) {
+    // Handle button click to start binding (only if not waiting for mouse release after previous bind)
+    if (buttonHovered && ImGui::IsMouseClicked(0) && !isBinding && !g_waitingForMouseReleaseAfterBind) {
         g_activeHotkeyId = id;
+        g_waitingForMouseRelease = true;  // Wait for mouse release before detecting keys
     }
 
     // Handle key input when binding
     if (isBinding) {
 #ifdef _WIN32
-        // Check for mouse button press first (VK_LBUTTON=0x01, VK_RBUTTON=0x02, VK_MBUTTON=0x04, VK_XBUTTON1=0x05, VK_XBUTTON2=0x06)
-        // Note: Skip left mouse button (0x01) to avoid conflict with UI clicking
-        int mouseButtons[] = { 0x02, 0x04, 0x05, 0x06 }; // Mouse2-5
-        for (int mb : mouseButtons) {
-            if (GetAsyncKeyState(mb) & 0x8000) {
-                binding->key = mb;
-                binding->ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
-                binding->alt = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
-                binding->shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
-                g_activeHotkeyId = 0;
-                changed = true;
-                break;
+        // Wait for mouse button to be released before starting detection
+        if (g_waitingForMouseRelease) {
+            if (!(GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
+                g_waitingForMouseRelease = false;  // Mouse released, start detecting
             }
-        }
-
-        // Check for keyboard key press
-        if (!changed) {
-            for (int vk = 0x08; vk <= 0xFE; vk++) {
-                // Skip modifier keys
-                if (vk == VK_CONTROL || vk == VK_SHIFT || vk == VK_MENU ||
-                    vk == VK_LCONTROL || vk == VK_RCONTROL ||
-                    vk == VK_LSHIFT || vk == VK_RSHIFT ||
-                    vk == VK_LMENU || vk == VK_RMENU) {
-                    continue;
-                }
-
-                if (GetAsyncKeyState(vk) & 0x8000) {
-                    // Check if this is escape to cancel
-                    if (vk == VK_ESCAPE) {
-                        g_activeHotkeyId = 0;
-                        break;
-                    }
-
-                    binding->key = vk;
+            // Skip all detection while waiting for release
+        } else {
+            // Check for mouse button press first (all mouse buttons including Mouse1)
+            int mouseButtons[] = { 0x01, 0x02, 0x04, 0x05, 0x06 }; // Mouse1-5
+            for (int mb : mouseButtons) {
+                if (GetAsyncKeyState(mb) & 0x8000) {
+                    binding->key = mb;
                     binding->ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
                     binding->alt = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
                     binding->shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
                     g_activeHotkeyId = 0;
+                    // Wait for mouse release before allowing button click again (especially for Mouse1)
+                    if (mb == 0x01) {
+                        g_waitingForMouseReleaseAfterBind = true;
+                    }
                     changed = true;
                     break;
+                }
+            }
+
+            // Check for keyboard key press (including modifier keys as standalone bindings)
+            if (!changed) {
+                for (int vk = 0x08; vk <= 0xFE; vk++) {
+                    if (GetAsyncKeyState(vk) & 0x8000) {
+                        // Check if this is escape to cancel
+                        if (vk == VK_ESCAPE) {
+                            g_activeHotkeyId = 0;
+                            break;
+                        }
+
+                        binding->key = vk;
+
+                        // Check if the key itself is a modifier key
+                        bool isModifierKey = (vk == VK_CONTROL || vk == VK_SHIFT || vk == VK_MENU ||
+                                              vk == VK_LCONTROL || vk == VK_RCONTROL ||
+                                              vk == VK_LSHIFT || vk == VK_RSHIFT ||
+                                              vk == VK_LMENU || vk == VK_RMENU);
+
+                        // Don't set modifier flags if the key IS a modifier (to avoid "Ctrl+LCtrl" etc.)
+                        if (!isModifierKey) {
+                            binding->ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+                            binding->alt = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+                            binding->shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+                        } else {
+                            binding->ctrl = false;
+                            binding->alt = false;
+                            binding->shift = false;
+                        }
+
+                        g_activeHotkeyId = 0;
+                        changed = true;
+                        break;
+                    }
                 }
             }
         }

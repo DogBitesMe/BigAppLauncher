@@ -417,6 +417,68 @@ const char* GetKeyName(int vk) {
         case 0xA4: return "LAlt";
         case 0xA5: return "RAlt";
 
+        // OEM keys (standard US keyboard layout)
+        case 0xBA: return ";";          // VK_OEM_1 - semicolon
+        case 0xBB: return "=";          // VK_OEM_PLUS - equals/plus
+        case 0xBC: return ",";          // VK_OEM_COMMA
+        case 0xBD: return "-";          // VK_OEM_MINUS
+        case 0xBE: return ".";          // VK_OEM_PERIOD
+        case 0xBF: return "/";          // VK_OEM_2 - slash
+        case 0xC0: return "`";          // VK_OEM_3 - grave/tilde
+        case 0xDB: return "[";          // VK_OEM_4 - open bracket
+        case 0xDC: return "\\";         // VK_OEM_5 - backslash
+        case 0xDD: return "]";          // VK_OEM_6 - close bracket
+        case 0xDE: return "'";          // VK_OEM_7 - apostrophe
+
+        // Extended function keys
+        case 0x7C: return "F13";
+        case 0x7D: return "F14";
+        case 0x7E: return "F15";
+        case 0x7F: return "F16";
+        case 0x80: return "F17";
+        case 0x81: return "F18";
+        case 0x82: return "F19";
+        case 0x83: return "F20";
+        case 0x84: return "F21";
+        case 0x85: return "F22";
+        case 0x86: return "F23";
+        case 0x87: return "F24";
+
+        // Additional system keys
+        case 0x03: return "Cancel";     // VK_CANCEL (Ctrl+Break)
+        case 0x0C: return "Clear";      // VK_CLEAR
+        case 0x15: return "IME Kana";   // VK_KANA
+        case 0x19: return "IME Kanji";  // VK_KANJI
+        case 0x1C: return "IME Convert"; // VK_CONVERT
+        case 0x2F: return "Help";       // VK_HELP
+        case 0x5B: return "LWin";       // VK_LWIN
+        case 0x5C: return "RWin";       // VK_RWIN
+        case 0x5D: return "Apps";       // VK_APPS (context menu)
+        case 0x5F: return "Sleep";      // VK_SLEEP
+        case 0x6C: return "Separator";  // VK_SEPARATOR (numpad separator)
+
+        // Browser keys
+        case 0xA6: return "BrowserBack";
+        case 0xA7: return "BrowserFwd";
+        case 0xA8: return "BrowserRefresh";
+        case 0xA9: return "BrowserStop";
+        case 0xAA: return "BrowserSearch";
+        case 0xAB: return "BrowserFav";
+        case 0xAC: return "BrowserHome";
+
+        // Media keys
+        case 0xAD: return "VolMute";
+        case 0xAE: return "VolDown";
+        case 0xAF: return "VolUp";
+        case 0xB0: return "MediaNext";
+        case 0xB1: return "MediaPrev";
+        case 0xB2: return "MediaStop";
+        case 0xB3: return "MediaPlay";
+        case 0xB4: return "LaunchMail";
+        case 0xB5: return "LaunchMedia";
+        case 0xB6: return "LaunchApp1";
+        case 0xB7: return "LaunchApp2";
+
         default: return "Unknown";
     }
 }
