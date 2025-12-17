@@ -156,12 +156,37 @@ Press F12 or look for the Debug Controller window to:
 4. **Icon centering**: Custom rendering with CalcTextSize for proper icon alignment
 5. **Transparency**: HUD elements use black (0,0,0) as transparent for overlay compositing
 
+## NEXO Style UI
+
+For NEXO-style panel design guidelines, layout constants, and GroupBox hierarchy, see:
+- **[docs/NEXO_STYLE_GUIDE.md](docs/NEXO_STYLE_GUIDE.md)**
+
+Key constants:
+- Window: `HEADER_HEIGHT=50`, `FOOTER_HEIGHT=40`, `PADDING=20`
+- Left-Right Split: `LEFT_PANEL_WIDTH=280`
+- Three-Column: `parentPadding=12`, `colSpacing=16`
+- Lv1 GroupBox: `padX=12`, `padY=10`, `cornerRadius=10`
+- Lv2 GroupBox: `padX=10`, `padY=8`, `cornerRadius=8`
+
 ## File Naming Conventions
 
 - Classes: PascalCase (`LoginScreen`, `VideoPlayer`)
 - Files: Match class name (`LoginScreen.cpp`)
 - Headers: `.h` extension
 - Members: `m_` prefix (`m_currentTab`, `m_isLoggedIn`)
+
+## Code Organization Principles
+
+1. **Separate files for different features**: Avoid single files becoming too large. Each distinct feature or component should have its own file.
+   - Example: `StyleUI.h` for declarations, `StyleUIWidgets.cpp` for widget implementations
+   - Example: Each screen in `screens/` folder (LoginScreen, ProductsScreen, LargeDemoScreen)
+
+2. **Maximum file size guideline**: If a source file exceeds ~1000 lines, consider splitting it into logical sub-components.
+
+3. **Header organization**:
+   - Public API in `.h` files
+   - Implementation details in `.cpp` files
+   - Use forward declarations to minimize header dependencies
 
 ## Common Tasks
 
