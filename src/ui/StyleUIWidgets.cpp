@@ -1619,8 +1619,11 @@ int TabBarPillIcon(const char* id, const char** icons, const char** labels, int 
         }
 
         // Underline indicator for active tab - with pulsing animation
+        // Position at the bottom of the pill (not just the tab)
         if (isActive) {
-            float indicatorY = tabBB.Max.y - 2.5f;
+            float indicatorHeight = 2.5f;
+            float pillBottom = pos.y + pillH;  // Bottom of the pill
+            float indicatorY = pillBottom - indicatorHeight;
             float indicatorPadding = tabW * 0.25f; // 25% padding on each side
 
             // Pulsing animation: brightness oscillates between 0.7 and 1.3
@@ -1644,13 +1647,13 @@ int TabBarPillIcon(const char* id, const char** icons, const char** labels, int 
             // Left half: dim -> bright
             dl->AddRectFilledMultiColor(
                 ImVec2(indicatorLeft, indicatorY),
-                ImVec2(indicatorMid, tabBB.Max.y),
+                ImVec2(indicatorMid, pillBottom),
                 gradEdge, gradCenter, gradCenter, gradEdge
             );
             // Right half: bright -> dim
             dl->AddRectFilledMultiColor(
                 ImVec2(indicatorMid, indicatorY),
-                ImVec2(indicatorRight, tabBB.Max.y),
+                ImVec2(indicatorRight, pillBottom),
                 gradCenter, gradEdge, gradEdge, gradCenter
             );
         }
