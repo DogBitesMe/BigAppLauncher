@@ -296,6 +296,7 @@ void EndGroupBoxGlass() {
 //-----------------------------------------------------------------------------
 
 static int g_flatGroupBoxDepth = 0;
+static bool g_flatGroupBoxHasInnerChild[16] = { false }; // Track if inner scrollable child was created
 
 bool BeginGroupBoxFlat(const char* label, const ImVec2& size) {
     return BeginGroupBoxFlatEx(nullptr, label, size);
@@ -324,6 +325,7 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     // Content padding
     const float padX = 12.0f;
     const float padY = 10.0f;
+    const float headerHeight = (label && label[0]) ? (ImGui::GetFontSize() + padY * 2) : 0.0f;
 
     ImGui::PushStyleColor(ImGuiCol_ChildBg, flatBgColor);
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
@@ -331,16 +333,16 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
-    // Use provided size or auto-resize, no scrollbar, force window padding
-    ImGuiChildFlags childFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
-    childFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
-    ImGui::BeginChild(label, contentSize, childFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    // Outer container (no scroll) - holds header and content area
+    ImGuiChildFlags outerFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
+    outerFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
+    ImGui::BeginChild(label, contentSize, outerFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (window->SkipItems) {
         return true;
     }
 
-    // Draw title text (no header bar background)
+    // Draw title text (no header bar background) - outside scrolling area
     if (label && label[0]) {
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         ImVec2 windowPos = ImGui::GetWindowPos();
@@ -363,10 +365,24 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
             );
         }
 
-        // Use Dummy to move cursor below title, preserving WindowPadding X offset
+        // Move cursor below header
         ImGui::Dummy(ImVec2(0, ImGui::GetFontSize() + padY));
     }
-    // WindowPadding handles initial cursor position when no title
+
+    // Inner scrollable content area (only when fixed height specified)
+    bool hasInnerChild = (contentSize.y > 0);
+    if (g_flatGroupBoxDepth > 0 && g_flatGroupBoxDepth <= 16) {
+        g_flatGroupBoxHasInnerChild[g_flatGroupBoxDepth - 1] = hasInnerChild;
+    }
+
+    if (hasInnerChild) {
+        float innerHeight = contentSize.y - headerHeight - padY;
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+    }
 
     return true;
 }
@@ -375,6 +391,13 @@ void EndGroupBoxFlat() {
     if (g_flatGroupBoxDepth <= 0) return;
     g_flatGroupBoxDepth--;
 
+    // End inner scrollable child if it was created
+    if (g_flatGroupBoxDepth < 16 && g_flatGroupBoxHasInnerChild[g_flatGroupBoxDepth]) {
+        ImGui::EndChild();
+        g_flatGroupBoxHasInnerChild[g_flatGroupBoxDepth] = false;
+    }
+
+    // End outer container
     ImGui::EndChild();
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(2);
@@ -388,6 +411,7 @@ void EndGroupBoxFlat() {
 //-----------------------------------------------------------------------------
 
 static int g_nestedGroupBoxDepth = 0;
+static bool g_nestedGroupBoxHasInnerChild[16] = { false }; // Track if inner scrollable child was created
 
 bool BeginGroupBoxNested(const char* label, const ImVec2& size) {
     return BeginGroupBoxNestedEx(nullptr, label, size);
@@ -416,6 +440,7 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     // Content padding
     const float padX = 10.0f;
     const float padY = 8.0f;
+    const float headerHeight = (label && label[0]) ? (ImGui::GetFontSize() + padY * 2) : 0.0f;
 
     ImGui::PushStyleColor(ImGuiCol_ChildBg, nestedBgColor);
     ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
@@ -423,22 +448,16 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
-    // Use provided size or auto-resize, force window padding
-    ImGuiChildFlags childFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
-    childFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
-
-    // Only disable scroll when auto-height; allow scroll when fixed height
-    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_None;
-    if (contentSize.y <= 0) {
-        windowFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-    }
-    ImGui::BeginChild(label, contentSize, childFlags, windowFlags);
+    // Outer container (no scroll) - holds header and content area
+    ImGuiChildFlags outerFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
+    outerFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
+    ImGui::BeginChild(label, contentSize, outerFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (window->SkipItems) {
         return true;
     }
 
-    // Draw title text if provided (smaller, secondary style)
+    // Draw title text if provided (smaller, secondary style) - this is outside scrolling area
     if (label && label[0]) {
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         ImVec2 windowPos = ImGui::GetWindowPos();
@@ -461,10 +480,24 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
             );
         }
 
-        // Use Dummy to move cursor below title, preserving WindowPadding X offset
+        // Move cursor below header
         ImGui::Dummy(ImVec2(0, ImGui::GetFontSize() + padY));
     }
-    // WindowPadding handles initial cursor position when no title
+
+    // Inner scrollable content area (only when fixed height specified)
+    bool hasInnerChild = (contentSize.y > 0);
+    if (g_nestedGroupBoxDepth > 0 && g_nestedGroupBoxDepth <= 16) {
+        g_nestedGroupBoxHasInnerChild[g_nestedGroupBoxDepth - 1] = hasInnerChild;
+    }
+
+    if (hasInnerChild) {
+        float innerHeight = contentSize.y - headerHeight - padY;
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+    }
 
     return true;
 }
@@ -473,6 +506,13 @@ void EndGroupBoxNested() {
     if (g_nestedGroupBoxDepth <= 0) return;
     g_nestedGroupBoxDepth--;
 
+    // End inner scrollable child if it was created
+    if (g_nestedGroupBoxDepth < 16 && g_nestedGroupBoxHasInnerChild[g_nestedGroupBoxDepth]) {
+        ImGui::EndChild();
+        g_nestedGroupBoxHasInnerChild[g_nestedGroupBoxDepth] = false;
+    }
+
+    // End outer container
     ImGui::EndChild();
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(2);
