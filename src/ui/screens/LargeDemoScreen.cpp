@@ -211,12 +211,10 @@ void LargeDemoScreen::RenderFooter(float width, float y) {
     drawList->AddText(ImVec2(windowPos.x + PADDING, textY), IM_COL32(120, 120, 120, 255), version);
 
     // Language selector (center)
-    ImGui::SetCursorPos(ImVec2(width * 0.5f - 60, y + 8));
-    ImGui::PushItemWidth(120);
-    if (StyleUI::LanguageCombo("##FooterLang", m_currentLanguage, 120.0f)) {
+    ImGui::SetCursorPos(ImVec2(width * 0.5f - 80, y + (FOOTER_HEIGHT - ImGui::GetFontSize()) * 0.5f - 2));
+    if (StyleUI::LanguageSelector("##FooterLang", m_currentLanguage)) {
         i18n::SetLanguage(m_currentLanguage);
     }
-    ImGui::PopItemWidth();
 
     // Expiry info (right side, before exit)
     const char* expiry = "Expires: 2025-12-31";
@@ -293,7 +291,7 @@ void LargeDemoScreen::RenderContent(float width, float height) {
 void LargeDemoScreen::RenderAimbotTab(float width, float height) {
     // Two-column layout with fixed height
     float leftWidth = LEFT_PANEL_WIDTH;
-    float rightWidth = width - leftWidth - PADDING;
+    float rightWidth = width - leftWidth - COLUMN_SPACING;
 
     // Use most of the available height
     float contentHeight = height - 5.0f;
@@ -309,17 +307,28 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
         DEBUG_SHOW_BORDERS ? ImGuiChildFlags_Borders : ImGuiChildFlags_None,
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-    // Upper Box - Aimbot Settings
+    // Upper Box - Aimbot Settings (testing Lv1 scrollbar)
     if (StyleUI::BeginGroupBoxFlat("Aimbot", ImVec2(0, boxHeight))) {
         StyleUI::ToggleSwitch("Enable Aimbot", &m_aimbotEnabled);
         ImGui::Spacing();
         StyleUI::Checkbox("Silent Aim", &m_aimbotSilent);
         StyleUI::Checkbox("Visible Only", &m_aimbotVisibleOnly);
-        ImGui::Spacing();
+        ImGui::Separator();
         StyleUI::SliderFloat("FOV", &m_aimbotFov, 1.0f, 90.0f, "%.1f");
         StyleUI::SliderFloat("Smoothness", &m_aimbotSmooth, 1.0f, 20.0f, "%.1f");
         const char* bones[] = { "Head", "Neck", "Chest" };
         StyleUI::Combo("Target Bone", &m_aimbotBoneIndex, bones, 3);
+        ImGui::Separator();
+        StyleUI::SliderFloat("Aim Speed", &m_aimSpeed, 1.0f, 20.0f, "%.1f");
+        StyleUI::SliderFloat("Acceleration", &m_aimAcceleration, 0.5f, 5.0f, "%.1f");
+        StyleUI::Checkbox("Hold to Aim", &m_holdToAim);
+        ImGui::Separator();
+        StyleUI::Checkbox("Auto Fire", &m_triggerbotOnKey);
+        StyleUI::Checkbox("Recoil Control", &m_noFlash);
+        StyleUI::SliderFloat("RCS Amount", &m_flashAlpha, 0.0f, 100.0f, "%.0f%%");
+        ImGui::Separator();
+        StyleUI::Checkbox("Prediction", &m_bunnyHop);
+        StyleUI::SliderFloat("Predict Time", &m_radarZoom, 0.0f, 200.0f, "%.0f ms");
         StyleUI::EndGroupBoxFlat();
     }
 
@@ -341,7 +350,7 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
     }
 
     // Right column - fixed height, Tab inside GroupBox
-    ImGui::SameLine();
+    ImGui::SameLine(0, COLUMN_SPACING);
 
     // Debug: Blue border for right column
     if (DEBUG_SHOW_BORDERS) {
@@ -458,7 +467,7 @@ void LargeDemoScreen::RenderAimbotTab(float width, float height) {
 
 void LargeDemoScreen::RenderVisualTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
-    float rightWidth = width - leftWidth - PADDING;
+    float rightWidth = width - leftWidth - COLUMN_SPACING;
     float contentHeight = height - 5.0f;
     float boxHeight = contentHeight;
 
@@ -493,7 +502,7 @@ void LargeDemoScreen::RenderVisualTab(float width, float height) {
     ImGui::EndChild();
 
     // Right column - fixed height, Tab inside GroupBox
-    ImGui::SameLine();
+    ImGui::SameLine(0, COLUMN_SPACING);
     ImGui::BeginChild("##VisualRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (StyleUI::BeginGroupBoxFlat("Visual Settings", ImVec2(0, boxHeight))) {
@@ -547,7 +556,7 @@ void LargeDemoScreen::RenderVisualTab(float width, float height) {
 
 void LargeDemoScreen::RenderMiscTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
-    float rightWidth = width - leftWidth - PADDING;
+    float rightWidth = width - leftWidth - COLUMN_SPACING;
     float contentHeight = height - 5.0f;
     float boxHeight = contentHeight;
 
@@ -578,7 +587,7 @@ void LargeDemoScreen::RenderMiscTab(float width, float height) {
     ImGui::EndChild();
 
     // Right column - fixed height, Tab inside GroupBox
-    ImGui::SameLine();
+    ImGui::SameLine(0, COLUMN_SPACING);
     ImGui::BeginChild("##MiscRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (StyleUI::BeginGroupBoxFlat("Misc Settings", ImVec2(0, boxHeight))) {
@@ -618,7 +627,7 @@ void LargeDemoScreen::RenderMiscTab(float width, float height) {
 
 void LargeDemoScreen::RenderSettingsTab(float width, float height) {
     float leftWidth = LEFT_PANEL_WIDTH;
-    float rightWidth = width - leftWidth - PADDING;
+    float rightWidth = width - leftWidth - COLUMN_SPACING;
     float contentHeight = height - 5.0f;
     float boxHeight = contentHeight;
 
@@ -650,7 +659,7 @@ void LargeDemoScreen::RenderSettingsTab(float width, float height) {
     ImGui::EndChild();
 
     // Right column - fixed height, Tab inside GroupBox
-    ImGui::SameLine();
+    ImGui::SameLine(0, COLUMN_SPACING);
     ImGui::BeginChild("##SettingsRight", ImVec2(rightWidth, contentHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (StyleUI::BeginGroupBoxFlat("Settings", ImVec2(0, boxHeight))) {
@@ -678,7 +687,7 @@ void LargeDemoScreen::RenderSettingsTab(float width, float height) {
             }
         } else if (m_settingsSubTab == 1) {
             if (StyleUI::BeginGroupBoxNested("Language")) {
-                if (StyleUI::LanguageCombo("Interface Language", m_currentLanguage)) {
+                if (StyleUI::LanguageSelector("Interface Language", m_currentLanguage)) {
                     i18n::SetLanguage(m_currentLanguage);
                 }
                 StyleUI::EndGroupBoxNested();

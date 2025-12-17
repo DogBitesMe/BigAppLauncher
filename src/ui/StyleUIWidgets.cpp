@@ -2810,6 +2810,77 @@ bool LanguageCombo(const char* label, std::string& currentLang, float width) {
     return changed;
 }
 
+bool LanguageSelector(const char* label, std::string& currentLang) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+
+    // Get available languages from i18n system
+    const auto& languages = i18n::Localization::Instance().GetAvailableLanguages();
+    if (languages.empty()) return false;
+
+    bool changed = false;
+    float spacing = 16.0f;
+
+    // Draw label if provided
+    if (label && label[0] && label[0] != '#') {
+        ImGui::TextColored(ImVec4(colors.TextSecondary.x, colors.TextSecondary.y, colors.TextSecondary.z, colors.TextSecondary.w), "%s", label);
+        ImGui::Spacing();
+    }
+
+    ImGui::PushID(label);
+
+    // Render horizontal language options
+    for (size_t i = 0; i < languages.size(); i++) {
+        if (i > 0) {
+            ImGui::SameLine(0, spacing);
+        }
+
+        bool isSelected = (languages[i].code == currentLang);
+        // Use short names for cleaner display
+        const char* langName = languages[i].nativeName.c_str();
+        if (languages[i].code == "zh-CN") langName = "\xe7\xae\x80\xe4\xbd\x93";  // 简体
+        else if (languages[i].code == "zh-TW") langName = "\xe7\xb9\x81\xe9\xab\x94";  // 繁體
+        else if (languages[i].code == "en-US") langName = "English";
+
+        ImVec2 textSize = ImGui::CalcTextSize(langName);
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+
+        // Clickable area (no extra padding needed for text-only style)
+        ImGui::PushID((int)i);
+        ImGui::InvisibleButton("##lang", ImVec2(textSize.x, textSize.y + 4));
+        bool hovered = ImGui::IsItemHovered();
+        bool clicked = ImGui::IsItemClicked();
+
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+
+        // Text color only - no background
+        // Selected: white (Text), Hovered: white (Text), Normal: gray (TextSecondary)
+        ImU32 textColor;
+        if (isSelected) {
+            textColor = ColorToU32(colors.Text);  // White/bright
+        } else if (hovered) {
+            textColor = ColorToU32(colors.Text);  // White/bright on hover
+        } else {
+            textColor = ColorToU32(colors.TextSecondary);  // Gray
+        }
+
+        dl->AddText(pos, textColor, langName);
+
+        if (clicked && !isSelected) {
+            currentLang = languages[i].code;
+            changed = true;
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::PopID();
+
+    return changed;
+}
+
 //-----------------------------------------------------------------------------
 // Color Picker
 //-----------------------------------------------------------------------------

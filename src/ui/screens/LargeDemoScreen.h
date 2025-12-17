@@ -112,6 +112,7 @@ private:
     static constexpr float FOOTER_HEIGHT = 40.0f;
     static constexpr float PADDING = 20.0f;
     static constexpr float LEFT_PANEL_WIDTH = 280.0f;
+    static constexpr float COLUMN_SPACING = 16.0f;  // Space between Lv1 boxes
 
     // Debug
     static constexpr bool DEBUG_SHOW_BORDERS = false;

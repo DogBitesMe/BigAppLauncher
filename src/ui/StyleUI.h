@@ -276,6 +276,10 @@ bool ComboEx(const char* label, int* current, const char** items, int count, flo
 // Returns true if language was changed
 bool LanguageCombo(const char* label, std::string& currentLang, float width = 0.0f);
 
+// Language selector with clickable text options (horizontal row)
+// Selected language is highlighted, returns true if changed
+bool LanguageSelector(const char* label, std::string& currentLang);
+
 // Color Picker
 bool ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags = 0);
 
