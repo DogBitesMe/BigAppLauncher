@@ -325,18 +325,18 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     // Content padding
     const float padX = 12.0f;
     const float padY = 10.0f;
+    const float cornerRadius = 10.0f;
     const float headerHeight = (label && label[0]) ? (ImGui::GetFontSize() + padY * 2) : 0.0f;
 
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, flatBgColor);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f); // Large rounded corners
-    // Outer container only needs padding for header area (X padding for title alignment)
+    // Outer container - transparent background (we draw it manually)
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
     // Outer container (no scroll) - holds header and content area
     ImGuiChildFlags outerFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
-    // Don't force window padding on outer when we have inner content child
     if (contentSize.y <= 0) {
         outerFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
     }
@@ -346,11 +346,36 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
         return true;
     }
 
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2 windowPos = ImGui::GetWindowPos();
+    ImVec2 windowSize = ImGui::GetWindowSize();
+
+    // Draw header background (top rounded corners only)
+    if (headerHeight > 0) {
+        drawList->AddRectFilled(
+            windowPos,
+            ImVec2(windowPos.x + windowSize.x, windowPos.y + headerHeight),
+            ColorToU32(flatBgColor),
+            cornerRadius,
+            ImDrawFlags_RoundCornersTop
+        );
+    }
+
+    // Draw content background (bottom rounded corners only)
+    float contentY = windowPos.y + headerHeight;
+    float contentH = windowSize.y - headerHeight;
+    if (contentH > 0) {
+        drawList->AddRectFilled(
+            ImVec2(windowPos.x, contentY),
+            ImVec2(windowPos.x + windowSize.x, windowPos.y + windowSize.y),
+            ColorToU32(flatBgColor),
+            cornerRadius,
+            ImDrawFlags_RoundCornersBottom
+        );
+    }
+
     // Draw title text (no header bar background) - outside scrolling area
     if (label && label[0]) {
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        ImVec2 windowPos = ImGui::GetWindowPos();
-
         float textY = windowPos.y + padY;
 
         if (icon && icon[0]) {
@@ -382,10 +407,16 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     if (hasInnerChild) {
         float innerHeight = contentSize.y - headerHeight;
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY)); // Content has padding
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f); // No rounding - background is drawn manually
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f); // Thinner scrollbar
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0, 0, 0, 0)); // Transparent scrollbar background
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(1.0f, 1.0f, 1.0f, 0.2f)); // Light scrollbar
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.35f));
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
         ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_None);
-        ImGui::PopStyleVar();
-        ImGui::PopStyleColor();
+        ImGui::PopStyleColor(5);
+        ImGui::PopStyleVar(3);
     }
 
     return true;
@@ -444,18 +475,18 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     // Content padding
     const float padX = 10.0f;
     const float padY = 8.0f;
+    const float cornerRadius = 8.0f;
     const float headerHeight = (label && label[0]) ? (ImGui::GetFontSize() + padY * 2) : 0.0f;
 
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, nestedBgColor);
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0)); // No border
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f); // Slightly smaller corners
-    // Outer container only needs padding for header area (X padding for title alignment)
+    // Outer container - transparent background (we draw it manually)
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
 
     // Outer container (no scroll) - holds header and content area
     ImGuiChildFlags outerFlags = (contentSize.y > 0) ? ImGuiChildFlags_None : ImGuiChildFlags_AutoResizeY;
-    // Don't force window padding on outer when we have inner content child
     if (contentSize.y <= 0) {
         outerFlags |= ImGuiChildFlags_AlwaysUseWindowPadding;
     }
@@ -465,11 +496,36 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
         return true;
     }
 
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2 windowPos = ImGui::GetWindowPos();
+    ImVec2 windowSize = ImGui::GetWindowSize();
+
+    // Draw header background (top rounded corners only)
+    if (headerHeight > 0) {
+        drawList->AddRectFilled(
+            windowPos,
+            ImVec2(windowPos.x + windowSize.x, windowPos.y + headerHeight),
+            ColorToU32(nestedBgColor),
+            cornerRadius,
+            ImDrawFlags_RoundCornersTop
+        );
+    }
+
+    // Draw content background (bottom rounded corners only)
+    float contentY = windowPos.y + headerHeight;
+    float contentH = windowSize.y - headerHeight;
+    if (contentH > 0) {
+        drawList->AddRectFilled(
+            ImVec2(windowPos.x, contentY),
+            ImVec2(windowPos.x + windowSize.x, windowPos.y + windowSize.y),
+            ColorToU32(nestedBgColor),
+            cornerRadius,
+            ImDrawFlags_RoundCornersBottom
+        );
+    }
+
     // Draw title text if provided (smaller, secondary style) - this is outside scrolling area
     if (label && label[0]) {
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        ImVec2 windowPos = ImGui::GetWindowPos();
-
         float textY = windowPos.y + padY;
 
         if (icon && icon[0]) {
@@ -501,10 +557,16 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     if (hasInnerChild) {
         float innerHeight = contentSize.y - headerHeight;
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY)); // Content has padding
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f); // No rounding - background is drawn manually
+        ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 6.0f); // Thinner scrollbar
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0, 0, 0, 0)); // Transparent scrollbar background
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(1.0f, 1.0f, 1.0f, 0.2f)); // Light scrollbar
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.35f));
+        ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
         ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_None);
-        ImGui::PopStyleVar();
-        ImGui::PopStyleColor();
+        ImGui::PopStyleColor(5);
+        ImGui::PopStyleVar(3);
     }
 
     return true;
