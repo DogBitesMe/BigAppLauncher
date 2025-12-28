@@ -1,9 +1,11 @@
 #include "VideoPlayer.h"
 #include <mferror.h>
+#include <Shlwapi.h>  // For SHCreateMemStream (alternative) or use CreateStreamOnHGlobal
 
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "mfuuid.lib")
+#pragma comment(lib, "Shlwapi.lib")
 
 VideoPlayer::VideoPlayer() = default;
 
@@ -29,6 +31,7 @@ void VideoPlayer::Shutdown() {
     Stop();
 
     m_sourceReader.Reset();
+    m_byteStream.Reset();
     m_textureSRV.Reset();
     m_texture.Reset();
 
@@ -49,11 +52,12 @@ bool VideoPlayer::LoadVideo(const std::wstring& path) {
 
     // Release previous resources
     m_sourceReader.Reset();
+    m_byteStream.Reset();
     m_textureSRV.Reset();
     m_texture.Reset();
     m_isLoaded = false;
 
-    // Create source reader
+    // Create source reader attributes
     ComPtr<IMFAttributes> attributes;
     HRESULT hr = MFCreateAttributes(&attributes, 1);
     if (FAILED(hr)) return false;
@@ -62,14 +66,61 @@ bool VideoPlayer::LoadVideo(const std::wstring& path) {
     hr = attributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
     if (FAILED(hr)) return false;
 
+    // Create source reader from file path
     hr = MFCreateSourceReaderFromURL(path.c_str(), attributes.Get(), &m_sourceReader);
     if (FAILED(hr)) {
         return false;
     }
 
+    // Use shared initialization logic
+    return InitializeFromSourceReader();
+}
+
+bool VideoPlayer::LoadVideoFromMemory(const void* data, size_t dataSize) {
+    if (!m_isInitialized || !data || dataSize == 0) {
+        return false;
+    }
+
+    // Release previous resources
+    m_sourceReader.Reset();
+    m_byteStream.Reset();
+    m_textureSRV.Reset();
+    m_texture.Reset();
+    m_isLoaded = false;
+
+    // Create IStream from memory using SHCreateMemStream
+    // Note: SHCreateMemStream makes a copy of the data, so it's safe even if original data is freed
+    ComPtr<IStream> memStream;
+    memStream.Attach(SHCreateMemStream(
+        static_cast<const BYTE*>(data),
+        static_cast<UINT>(dataSize)
+    ));
+    if (!memStream) return false;
+
+    // Create IMFByteStream from IStream
+    HRESULT hr = MFCreateMFByteStreamOnStream(memStream.Get(), &m_byteStream);
+    if (FAILED(hr)) return false;
+
+    // Create source reader attributes
+    ComPtr<IMFAttributes> attributes;
+    hr = MFCreateAttributes(&attributes, 1);
+    if (FAILED(hr)) return false;
+
+    hr = attributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
+    if (FAILED(hr)) return false;
+
+    // Create source reader from byte stream
+    hr = MFCreateSourceReaderFromByteStream(m_byteStream.Get(), attributes.Get(), &m_sourceReader);
+    if (FAILED(hr)) return false;
+
+    // Use shared initialization logic
+    return InitializeFromSourceReader();
+}
+
+bool VideoPlayer::InitializeFromSourceReader() {
     // Configure output format to RGB32
     ComPtr<IMFMediaType> outputType;
-    hr = MFCreateMediaType(&outputType);
+    HRESULT hr = MFCreateMediaType(&outputType);
     if (FAILED(hr)) return false;
 
     hr = outputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);

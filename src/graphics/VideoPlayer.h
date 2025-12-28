@@ -18,6 +18,7 @@ public:
     void Shutdown();
 
     bool LoadVideo(const std::wstring& path);
+    bool LoadVideoFromMemory(const void* data, size_t dataSize);
     void Update(float deltaTime);
 
     void Play();
@@ -38,6 +39,7 @@ private:
     bool CreateTexture(int width, int height);
     bool DecodeFrame();
     void CopyFrameToTexture(IMFMediaBuffer* buffer);
+    bool InitializeFromSourceReader();  // Shared initialization after source reader creation
 
     // DirectX
     ID3D11Device* m_device = nullptr;
@@ -47,6 +49,7 @@ private:
 
     // Media Foundation
     ComPtr<IMFSourceReader> m_sourceReader;
+    ComPtr<IMFByteStream> m_byteStream;  // For memory-based loading
 
     // Video info
     int m_width = 0;
