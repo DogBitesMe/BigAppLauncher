@@ -51,6 +51,7 @@ ColorScheme GetDarkBlueScheme() {
     scheme.Text = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
     scheme.TextSecondary = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
     scheme.TextDisabled = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+    scheme.TabActiveText = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);  // Pure white for active tab
 
     // Controls
     scheme.ToggleOn = ImVec4(0.26f, 0.59f, 0.98f, 1.0f);
@@ -93,6 +94,7 @@ ColorScheme GetDarkPurpleScheme() {
     scheme.Text = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
     scheme.TextSecondary = ImVec4(0.75f, 0.70f, 0.80f, 1.0f);
     scheme.TextDisabled = ImVec4(0.5f, 0.5f, 0.55f, 1.0f);
+    scheme.TabActiveText = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);  // Pure white for active tab
 
     // Controls
     scheme.ToggleOn = ImVec4(0.60f, 0.40f, 0.90f, 1.0f);
@@ -135,6 +137,7 @@ ColorScheme GetDarkGreenScheme() {
     scheme.Text = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
     scheme.TextSecondary = ImVec4(0.70f, 0.78f, 0.72f, 1.0f);
     scheme.TextDisabled = ImVec4(0.50f, 0.55f, 0.52f, 1.0f);
+    scheme.TabActiveText = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);  // Pure white for active tab
 
     // Controls
     scheme.ToggleOn = ImVec4(0.26f, 0.80f, 0.50f, 1.0f);
@@ -177,6 +180,7 @@ ColorScheme GetDarkRedScheme() {
     scheme.Text = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
     scheme.TextSecondary = ImVec4(0.80f, 0.72f, 0.72f, 1.0f);
     scheme.TextDisabled = ImVec4(0.55f, 0.50f, 0.50f, 1.0f);
+    scheme.TabActiveText = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);  // Pure white for active tab
 
     // Controls
     scheme.ToggleOn = ImVec4(0.90f, 0.35f, 0.35f, 1.0f);

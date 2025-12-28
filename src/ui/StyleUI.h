@@ -33,6 +33,7 @@ struct ColorScheme {
     ImVec4 Text;
     ImVec4 TextSecondary;
     ImVec4 TextDisabled;
+    ImVec4 TabActiveText;       // Tab selected text color (default: white)
 
     // Controls
     ImVec4 ToggleOn;

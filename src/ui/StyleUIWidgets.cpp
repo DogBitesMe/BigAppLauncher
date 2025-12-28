@@ -1156,7 +1156,7 @@ int TabBarLargeEx(const char* id, const char** icons, const char** labels, int c
         if (isActive) {
             if (style.useGradient) {
                 // Gradient background matching slider/button style (0.7x to 1.8x)
-                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.5f);
                 ImU32 gradLeft = ColorToU32(ImVec4(
                     baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
                 ));
@@ -1281,7 +1281,7 @@ int TabBarSmallIcon(const char* id, const char** icons, const char** labels, int
         // Tab background with gradient for active tab
         if (isActive) {
             // Gradient background matching slider/button style (0.7x to 1.8x)
-            ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+            ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.5f);
             ImU32 gradLeft = ColorToU32(ImVec4(
                 baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
             ));
@@ -1319,7 +1319,7 @@ int TabBarSmallIcon(const char* id, const char** icons, const char** labels, int
         float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
         float textY = tabPos.y + (tabH - textSize.y) * 0.5f;
 
-        ImU32 textColor = isActive ? ColorToU32(colors.Primary) : ColorToU32(colors.TextSecondary);
+        ImU32 textColor = isActive ? ColorToU32(colors.TabActiveText) : ColorToU32(colors.TextSecondary);
         dl->AddText(ImVec2(textX, textY), textColor, fullText);
 
         if (hovered && ImGui::IsMouseClicked(0)) {
@@ -1408,7 +1408,7 @@ int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, i
 
             // Tab background
             if (isActive) {
-                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.5f);
                 ImU32 gradLeft = ColorToU32(ImVec4(
                     baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
                 ));
@@ -1446,7 +1446,7 @@ int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, i
             float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
             float textY = tabPos.y + (tabH - textSize.y) * 0.5f;
 
-            ImU32 textColor = isActive ? ColorToU32(colors.Primary) : ColorToU32(colors.TextSecondary);
+            ImU32 textColor = isActive ? ColorToU32(colors.TabActiveText) : ColorToU32(colors.TextSecondary);
             dl->AddText(ImVec2(textX, textY), textColor, fullText);
 
             if (hovered && ImGui::IsMouseClicked(0)) {
@@ -1475,7 +1475,7 @@ int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, i
 
             // Tab background
             if (isActive) {
-                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.5f);
                 ImU32 gradLeft = ColorToU32(ImVec4(
                     baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
                 ));
@@ -1513,7 +1513,7 @@ int TabBarSmallIconEx(const char* id, const char** icons, const char** labels, i
             float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
             float textY = tabPos.y + (tabH - textSize.y) * 0.5f;
 
-            ImU32 textColor = isActive ? ColorToU32(colors.Primary) : ColorToU32(colors.TextSecondary);
+            ImU32 textColor = isActive ? ColorToU32(colors.TabActiveText) : ColorToU32(colors.TextSecondary);
             dl->AddText(ImVec2(textX, textY), textColor, fullText);
 
             if (hovered && ImGui::IsMouseClicked(0)) {
@@ -2065,7 +2065,7 @@ int SubTabIcon(const char* id, const char** icons, const char** labels, int coun
         if (style == SubTabStyle::Gradient) {
             // Gradient style - like Tab with gradient background
             if (isActive) {
-                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+                ImVec4 baseColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.5f);
                 ImU32 gradLeft = ColorToU32(ImVec4(
                     baseColor.x * 0.7f, baseColor.y * 0.7f, baseColor.z * 0.7f, baseColor.w
                 ));
