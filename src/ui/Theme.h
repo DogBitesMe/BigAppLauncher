@@ -32,9 +32,10 @@ namespace Colors {
     inline ImVec4 TabActive = ImVec4(0.26f, 0.59f, 0.98f, 1.0f);
 
     // Status colors
-    inline ImVec4 Success = ImVec4(0.26f, 0.78f, 0.42f, 1.0f);
-    inline ImVec4 Warning = ImVec4(0.98f, 0.78f, 0.26f, 1.0f);
-    inline ImVec4 Error = ImVec4(0.98f, 0.36f, 0.36f, 1.0f);
+    inline ImVec4 Success = ImVec4(0.26f, 0.78f, 0.42f, 1.0f);       // Green
+    inline ImVec4 Warning = ImVec4(0.98f, 0.78f, 0.26f, 1.0f);       // Yellow/Orange
+    inline ImVec4 Error = ImVec4(0.98f, 0.36f, 0.36f, 1.0f);         // Red
+    inline ImVec4 Info = ImVec4(0.70f, 0.80f, 0.95f, 1.0f);          // Light Blue (neutral)
 
     // Border
     inline ImVec4 Border = ImVec4(0.26f, 0.26f, 0.32f, 1.0f);
