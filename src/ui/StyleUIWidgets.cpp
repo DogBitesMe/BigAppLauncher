@@ -3260,6 +3260,73 @@ bool ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags) {
     return changed;
 }
 
+bool ColorEditRow(const char* label, float col[4], ImGuiColorEditFlags flags) {
+    // Row layout color picker: title left, flat color box right (like Checkbox)
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    // Layout: Label on left, flat color box on right
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+    float totalW = ImGui::GetContentRegionAvail().x;
+
+    // Flat rectangle color box: 28x14px
+    float boxW = 28.0f;
+    float boxH = 14.0f;
+    float rowHeight = std::max(boxH, labelSize.y);
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + rowHeight));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Label (left) - use colors.Text
+    float textY = pos.y + (rowHeight - labelSize.y) * 0.5f;
+    dl->AddText(ImVec2(pos.x, textY), ColorToU32(colors.Text), label);
+
+    // Color box (right) - flat rectangle
+    float boxX = pos.x + totalW - boxW;
+    float boxY = pos.y + (rowHeight - boxH) * 0.5f;
+    ImVec2 boxMin(boxX, boxY);
+    ImVec2 boxMax(boxX + boxW, boxY + boxH);
+
+    // Draw color preview box (no rounding)
+    ImU32 colU32 = ImGui::ColorConvertFloat4ToU32(ImVec4(col[0], col[1], col[2], 1.0f));
+    dl->AddRectFilled(boxMin, boxMax, colU32, 0.0f);  // No rounding
+
+    // Border (no rounding)
+    bool hovered = ImGui::IsMouseHoveringRect(boxMin, boxMax);
+    dl->AddRect(boxMin, boxMax,
+        hovered ? ColorToU32(colors.BorderHover) : ColorToU32(colors.Border),
+        0.0f);  // No rounding
+
+    // Click to open color picker popup
+    bool clicked = hovered && ImGui::IsMouseClicked(0);
+    bool changed = false;
+
+    char popupId[64];
+    snprintf(popupId, sizeof(popupId), "##ColorPicker_%s", label);
+
+    if (clicked) {
+        ImGui::OpenPopup(popupId);
+    }
+
+    if (ImGui::BeginPopup(popupId)) {
+        ImGui::PushStyleColor(ImGuiCol_PopupBg, colors.BackgroundAlt);
+        changed = ImGui::ColorPicker3("##picker", col, ImGuiColorEditFlags_NoSidePreview);
+        ImGui::PopStyleColor();
+        ImGui::EndPopup();
+    }
+
+    return changed;
+}
+
 //-----------------------------------------------------------------------------
 // Separator with Text
 //-----------------------------------------------------------------------------

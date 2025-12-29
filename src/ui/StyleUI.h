@@ -311,6 +311,11 @@ bool LanguageSelector(const char* label, std::string& currentLang);
 // Color Picker
 bool ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags = 0);
 
+// Color Picker with row layout (title left, flat color box right)
+// Like Checkbox layout: [Label                ][Color Box]
+// Color box: 28x14px flat rectangle, no rounding
+bool ColorEditRow(const char* label, float col[4], ImGuiColorEditFlags flags = 0);
+
 // Separator with text
 void SeparatorText(const char* text);
 
