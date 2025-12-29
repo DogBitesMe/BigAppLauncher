@@ -329,7 +329,7 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
     ImGui::PushID(id);
 
     // Light gray background color (no border) - lighter than nested boxes
-    ImVec4 flatBgColor = ImVec4(50.0f/255.0f, 55.0f/255.0f, 65.0f/255.0f, 0.5f);
+    ImVec4 flatBgColor = ImVec4(32.0f/255.0f, 32.0f/255.0f, 32.0f/255.0f, 1.0f);  // #202020
 
     // Content padding
     const float padX = 12.0f;
@@ -423,7 +423,9 @@ bool BeginGroupBoxFlatEx(const char* icon, const char* label, const ImVec2& size
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(1.0f, 1.0f, 1.0f, 0.2f)); // Light scrollbar
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.35f));
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_None);
+        // Use default scrolling behavior: auto show/hide scrollbar based on content
+        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_AlwaysUseWindowPadding,
+            ImGuiWindowFlags_None);
         ImGui::PopStyleColor(5);
         ImGui::PopStyleVar(3);
     }
@@ -479,7 +481,7 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     ImGui::PushID(id);
 
     // Darker background color for nested sections
-    ImVec4 nestedBgColor = ImVec4(25.0f/255.0f, 28.0f/255.0f, 35.0f/255.0f, 0.8f);
+    ImVec4 nestedBgColor = ImVec4(28.0f/255.0f, 28.0f/255.0f, 28.0f/255.0f, 1.0f);  // #1C1C1C
 
     // Content padding (slightly larger for scrollbar space)
     const float padX = 12.0f;
@@ -573,7 +575,9 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(1.0f, 1.0f, 1.0f, 0.2f)); // Light scrollbar
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.35f));
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
-        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_None);
+        // Use default scrolling behavior: auto show/hide scrollbar based on content
+        ImGui::BeginChild("##Content", ImVec2(0, innerHeight), ImGuiChildFlags_AlwaysUseWindowPadding,
+            ImGuiWindowFlags_None);
         ImGui::PopStyleColor(5);
         ImGui::PopStyleVar(3);
     }

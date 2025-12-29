@@ -12,12 +12,12 @@ namespace Colors {
     inline ImVec4 PrimaryActive = ImVec4(0.10f, 0.65f, 0.90f, 1.0f);  // darker
 
     // Background colors
-    inline ImVec4 Background = ImVec4(0.06f, 0.06f, 0.09f, 1.0f);    // Dark background
+    inline ImVec4 Background = ImVec4(22.0f/255.0f, 22.0f/255.0f, 22.0f/255.0f, 1.0f);  // #161616
     inline ImVec4 Panel = ImVec4(0.12f, 0.12f, 0.16f, 0.95f);        // Panel background
     inline ImVec4 PanelHover = ImVec4(0.16f, 0.16f, 0.20f, 0.95f);
 
     // Text colors
-    inline ImVec4 Text = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+    inline ImVec4 Text = ImVec4(158.0f/255.0f, 158.0f/255.0f, 158.0f/255.0f, 1.0f);  // #9E9E9E
     inline ImVec4 TextDisabled = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
     inline ImVec4 TextHint = ImVec4(0.6f, 0.6f, 0.6f, 1.0f);
 
