@@ -178,6 +178,8 @@ bool SliderFloat(const char* label, float* v, float min, float max, const char* 
 bool SliderInt(const char* label, int* v, int min, int max, const char* format = "%d");
 bool SliderFloatGradient(const char* label, float* v, float min, float max,
                          const ImVec4& leftColor, const ImVec4& rightColor, const char* format = "%.1f");
+bool SliderIntGradient(const char* label, int* v, int min, int max,
+                       const ImVec4& trackColor, const ImVec4& fillColor, const char* format = "%d");
 
 // Tab Systems
 

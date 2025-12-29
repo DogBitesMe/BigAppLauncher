@@ -841,10 +841,8 @@ bool SliderFloat(const char* label, float* v, float min, float max, const char* 
 }
 
 bool SliderInt(const char* label, int* v, int min, int max, const char* format) {
-    float fv = (float)*v;
-    bool changed = SliderFloat(label, &fv, (float)min, (float)max, format);
-    if (changed) *v = (int)fv;
-    return changed;
+    const auto& colors = GetColorScheme();
+    return SliderIntGradient(label, v, min, max, colors.SliderTrack, colors.SliderFill, format);
 }
 
 bool SliderFloatGradient(const char* label, float* v, float min, float max,
@@ -909,6 +907,135 @@ bool SliderFloatGradient(const char* label, float* v, float min, float max,
 
     // Normalize value
     float t = (*v - min) / (max - min);
+    t = ImClamp(t, 0.0f, 1.0f);
+
+    // Draw track background
+    dl->AddRectFilled(
+        ImVec2(pos.x, trackYCenter),
+        ImVec2(pos.x + totalW, trackYCenter + trackH),
+        ColorToU32(trackColor),
+        trackH * 0.5f
+    );
+
+    // Draw filled portion with stronger gradient
+    float fillWidth = (totalW - grabW) * t;
+    if (fillWidth > 0) {
+        // Create gradient effect with stronger contrast (1.8x brightness)
+        ImVec2 fillMin(pos.x, trackYCenter);
+        ImVec2 fillMax(pos.x + fillWidth + grabW * 0.5f, trackYCenter + trackH);
+
+        // Darker left side (0.7x)
+        ImU32 gradLeft = ColorToU32(ImVec4(
+            fillColor.x * 0.7f,
+            fillColor.y * 0.7f,
+            fillColor.z * 0.7f,
+            fillColor.w
+        ));
+        // Brighter right side (1.8x, clamped to 1.0)
+        ImU32 gradRight = ColorToU32(ImVec4(
+            std::min(fillColor.x * 1.8f, 1.0f),
+            std::min(fillColor.y * 1.8f, 1.0f),
+            std::min(fillColor.z * 1.8f, 1.0f),
+            fillColor.w
+        ));
+
+        dl->AddRectFilledMultiColor(fillMin, fillMax, gradLeft, gradRight, gradRight, gradLeft);
+    }
+
+    // Draw grab handle
+    float grabX = pos.x + (totalW - grabW) * t;
+    float grabY = trackY + (sliderH - grabW) * 0.5f;
+
+    // Grab shadow
+    dl->AddCircleFilled(
+        ImVec2(grabX + grabW * 0.5f + 1, grabY + grabW * 0.5f + 1),
+        grabW * 0.5f,
+        IM_COL32(0, 0, 0, 40)
+    );
+
+    // Grab handle
+    ImU32 grabColor = held ? ColorToU32(colors.PrimaryActive) :
+                     (hovered ? ColorToU32(colors.PrimaryHover) : ColorToU32(colors.SliderGrab));
+    dl->AddCircleFilled(
+        ImVec2(grabX + grabW * 0.5f, grabY + grabW * 0.5f),
+        grabW * 0.5f,
+        grabColor
+    );
+
+    // Grab outline
+    dl->AddCircle(
+        ImVec2(grabX + grabW * 0.5f, grabY + grabW * 0.5f),
+        grabW * 0.5f,
+        ColorToU32(colors.Primary),
+        0,
+        1.5f
+    );
+
+    return held;
+}
+
+bool SliderIntGradient(const char* label, int* v, int min, int max,
+                       const ImVec4& trackColor, const ImVec4& fillColor, const char* format) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return false;
+
+    const auto& colors = GetColorScheme();
+    const auto& sizes = GetSizeConfig();
+
+    ImGuiID id = window->GetID(label);
+    ImVec2 pos = window->DC.CursorPos;
+
+    float totalW = ImGui::GetContentRegionAvail().x;
+    float sliderH = sizes.SliderHeight;
+    float grabW = sizes.SliderGrabWidth;
+
+    // Layout: Label on top, slider below
+    ImVec2 labelSize = ImGui::CalcTextSize(label);
+    float totalH = labelSize.y + sizes.ItemSpacing + sliderH;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + totalH));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, id)) return false;
+
+    ImDrawList* dl = window->DrawList;
+
+    // Draw label with value (use integer formatting)
+    char valueText[64];
+    snprintf(valueText, sizeof(valueText), format, *v);
+
+    dl->AddText(
+        ImVec2(pos.x, pos.y),
+        ColorToU32(colors.Text),
+        label
+    );
+
+    ImVec2 valueSize = ImGui::CalcTextSize(valueText);
+    dl->AddText(
+        ImVec2(pos.x + totalW - valueSize.x, pos.y),
+        ColorToU32(colors.TextSecondary),
+        valueText
+    );
+
+    // Slider track position
+    float trackY = pos.y + labelSize.y + sizes.ItemSpacing;
+    float trackH = sliderH * 0.4f;
+    float trackYCenter = trackY + (sliderH - trackH) * 0.5f;
+
+    ImRect sliderBB(ImVec2(pos.x, trackY), ImVec2(pos.x + totalW, trackY + sliderH));
+
+    // Interaction
+    bool hovered, held;
+    bool pressed = ImGui::ButtonBehavior(sliderBB, id, &hovered, &held);
+
+    if (held) {
+        float mouseX = ImGui::GetIO().MousePos.x;
+        float t = (mouseX - pos.x - grabW * 0.5f) / (totalW - grabW);
+        t = ImClamp(t, 0.0f, 1.0f);
+        *v = min + (int)((max - min) * t);
+    }
+
+    // Normalize value
+    float t = (float)(*v - min) / (float)(max - min);
     t = ImClamp(t, 0.0f, 1.0f);
 
     // Draw track background
@@ -3125,7 +3252,7 @@ bool ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags) {
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, colors.BorderHover);
     ImGui::PushStyleColor(ImGuiCol_PopupBg, colors.BackgroundAlt);
 
-    bool changed = ImGui::ColorEdit4(label, col, flags | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar);
+    bool changed = ImGui::ColorEdit4(label, col, flags | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha);
 
     ImGui::PopStyleColor(3);
     ImGui::PopID();
