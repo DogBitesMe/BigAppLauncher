@@ -756,7 +756,7 @@ bool Checkbox(const char* label, bool* v) {
         ImVec2 p2(checkX + boxSize * 0.25f, checkY + boxSize * 0.25f);
         ImVec2 p3(checkX + boxSize - pad * 2, checkY - boxSize * 0.2f);
 
-        ImU32 checkColor = IM_COL32(255, 255, 255, (int)(255 * animT));
+        ImU32 checkColor = IM_COL32(1, 8, 16, (int)(255 * animT));  // #010810 dark blue-black
         dl->AddLine(p1, p2, checkColor, 2.0f);
         dl->AddLine(p2, p3, checkColor, 2.0f);
     }
@@ -815,7 +815,7 @@ bool CheckboxClassic(const char* label, bool* v) {
         ImVec2 p2(checkX + boxSize * 0.25f, checkY + boxSize * 0.25f);
         ImVec2 p3(checkX + boxSize - pad * 2, checkY - boxSize * 0.2f);
 
-        ImU32 checkColor = IM_COL32(255, 255, 255, (int)(255 * animT));
+        ImU32 checkColor = IM_COL32(1, 8, 16, (int)(255 * animT));  // #010810 dark blue-black
         dl->AddLine(p1, p2, checkColor, 2.0f);
         dl->AddLine(p2, p3, checkColor, 2.0f);
     }
