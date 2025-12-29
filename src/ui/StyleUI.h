@@ -225,6 +225,20 @@ float TabBarPillCalcWidth(const char** labels, int count);  // Calculate total w
 int TabBarButton(const char* id, const char** labels, int count, int current);
 int TabBarButtonIcon(const char* id, const char** icons, const char** labels, int count, int current);
 
+// Button tabs with wrapping - Compact button-style tabs that wrap to multiple lines
+// Used for sub-page navigation with many items (e.g., world settings)
+struct ButtonTabStyle {
+    float tabPadding = 10.0f;      // Horizontal padding per tab (compact)
+    float tabSpacing = 11.0f;      // Space between tabs (+5px)
+    float rowSpacing = 9.0f;       // Space between rows (+5px)
+    float tabHeight = 26.0f;       // Tab button height (default 26px per VerApple UI spec)
+    float rounding = 4.0f;         // Corner rounding
+    bool showBackground = false;   // Show overall background
+};
+
+int TabBarButtonWrap(const char* id, const char** labels, int count, int current,
+                     const ButtonTabStyle& style = ButtonTabStyle());
+
 // RadioButton - Two styles
 // Segmented control (horizontal tab-like buttons)
 int RadioButtonGroup(const char* id, const char** labels, int count, int current);

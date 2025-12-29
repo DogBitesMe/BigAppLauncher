@@ -481,8 +481,8 @@ bool BeginGroupBoxNestedEx(const char* icon, const char* label, const ImVec2& si
     // Darker background color for nested sections
     ImVec4 nestedBgColor = ImVec4(25.0f/255.0f, 28.0f/255.0f, 35.0f/255.0f, 0.8f);
 
-    // Content padding
-    const float padX = 10.0f;
+    // Content padding (slightly larger for scrollbar space)
+    const float padX = 12.0f;
     const float padY = 8.0f;
     const float cornerRadius = 8.0f;
     const float headerHeight = (label && label[0]) ? (ImGui::GetFontSize() + padY * 2) : 0.0f;
@@ -1784,6 +1784,104 @@ int TabBarButtonIcon(const char* id, const char** icons, const char** labels, in
     return result;
 }
 
+int TabBarButtonWrap(const char* id, const char** labels, int count, int current,
+                     const ButtonTabStyle& style) {
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) return current;
+
+    const auto& colors = GetColorScheme();
+
+    ImGuiID tabId = window->GetID(id);
+    ImVec2 pos = window->DC.CursorPos;
+    float totalW = ImGui::GetContentRegionAvail().x;
+
+    ImDrawList* dl = window->DrawList;
+    int result = current;
+
+    // Calculate tab widths and determine row assignments
+    std::vector<float> tabWidths(count);
+    std::vector<int> tabRows(count);
+    float currentRowWidth = 0;
+    int currentRow = 0;
+
+    for (int i = 0; i < count; i++) {
+        const char* label = (labels && labels[i]) ? labels[i] : "";
+        ImVec2 textSize = ImGui::CalcTextSize(label);
+        float tabW = textSize.x + style.tabPadding * 2;
+        tabWidths[i] = tabW;
+
+        if (currentRowWidth > 0 && currentRowWidth + tabW + style.tabSpacing > totalW) {
+            // Start new row
+            currentRow++;
+            currentRowWidth = 0;
+        }
+
+        tabRows[i] = currentRow;
+        currentRowWidth += tabW + style.tabSpacing;
+    }
+
+    int rowCount = currentRow + 1;
+    float totalHeight = rowCount * style.tabHeight + (rowCount - 1) * style.rowSpacing;
+
+    ImRect bb(pos, ImVec2(pos.x + totalW, pos.y + totalHeight));
+    ImGui::ItemSize(bb);
+    if (!ImGui::ItemAdd(bb, tabId)) return current;
+
+    // Optional background
+    if (style.showBackground) {
+        dl->AddRectFilled(pos, ImVec2(pos.x + totalW, pos.y + totalHeight),
+                          ColorToU32(colors.BackgroundAlt), style.rounding);
+    }
+
+    // Render tabs
+    std::vector<float> rowXOffsets(rowCount, 0.0f);
+
+    for (int i = 0; i < count; i++) {
+        int row = tabRows[i];
+        float tabW = tabWidths[i];
+        float tabY = pos.y + row * (style.tabHeight + style.rowSpacing);
+        float tabX = pos.x + rowXOffsets[row];
+
+        ImVec2 tabPos(tabX, tabY);
+        ImRect tabBB(tabPos, ImVec2(tabPos.x + tabW, tabPos.y + style.tabHeight));
+
+        bool isActive = (i == current);
+        bool hovered = ImGui::IsMouseHoveringRect(tabBB.Min, tabBB.Max);
+
+        // Button background
+        if (isActive) {
+            // Solid primary color for active (like the reference image)
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, ColorToU32(colors.Primary), style.rounding);
+        } else if (hovered) {
+            // Semi-transparent hover
+            ImVec4 hoverColor = ImVec4(colors.Primary.x, colors.Primary.y, colors.Primary.z, 0.25f);
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, ColorToU32(hoverColor), style.rounding);
+        } else {
+            // Unselected: dark background
+            dl->AddRectFilled(tabBB.Min, tabBB.Max, IM_COL32(40, 45, 55, 200), style.rounding);
+        }
+
+        // Label text
+        const char* label = (labels && labels[i]) ? labels[i] : "";
+        ImVec2 textSize = ImGui::CalcTextSize(label);
+        float textX = tabPos.x + (tabW - textSize.x) * 0.5f;
+        float textY = tabPos.y + (style.tabHeight - textSize.y) * 0.5f;
+
+        // Selected: near-black text (10,10,10), Unselected: gray text (200,200,200)
+        ImU32 textColor = isActive ? IM_COL32(10, 10, 10, 255) : IM_COL32(200, 200, 200, 255);
+        dl->AddText(ImVec2(textX, textY), textColor, label);
+
+        if (hovered && ImGui::IsMouseClicked(0)) {
+            result = i;
+        }
+
+        // Add base spacing only (natural width, no fill)
+        rowXOffsets[row] += tabW + style.tabSpacing;
+    }
+
+    return result;
+}
+
 //-----------------------------------------------------------------------------
 // RadioButton
 //-----------------------------------------------------------------------------
@@ -2933,18 +3031,44 @@ bool LanguageSelector(const char* label, std::string& currentLang) {
 
     ImGui::PushID(label);
 
+    // Define display order: 繁体 -> 简体 -> English
+    struct LangDisplay {
+        std::string code;
+        std::string displayName;
+    };
+    std::vector<LangDisplay> orderedLangs;
+
+    // Add languages in preferred order: zh-TW first, then zh-CN, then en-US
+    for (const auto& lang : languages) {
+        if (lang.code == "zh-TW") {
+            orderedLangs.insert(orderedLangs.begin(), LangDisplay{lang.code, "\xe7\xb9\x81\xe4\xbd\x93"});  // 繁体
+        }
+    }
+    for (const auto& lang : languages) {
+        if (lang.code == "zh-CN") {
+            orderedLangs.push_back(LangDisplay{lang.code, "\xe7\xae\x80\xe4\xbd\x93"});  // 简体
+        }
+    }
+    for (const auto& lang : languages) {
+        if (lang.code == "en-US") {
+            orderedLangs.push_back(LangDisplay{lang.code, "English"});
+        }
+    }
+    // Add any other languages at the end
+    for (const auto& lang : languages) {
+        if (lang.code != "zh-TW" && lang.code != "zh-CN" && lang.code != "en-US") {
+            orderedLangs.push_back(LangDisplay{lang.code, lang.nativeName});
+        }
+    }
+
     // Render horizontal language options
-    for (size_t i = 0; i < languages.size(); i++) {
+    for (size_t i = 0; i < orderedLangs.size(); i++) {
         if (i > 0) {
             ImGui::SameLine(0, spacing);
         }
 
-        bool isSelected = (languages[i].code == currentLang);
-        // Use short names for cleaner display
-        const char* langName = languages[i].nativeName.c_str();
-        if (languages[i].code == "zh-CN") langName = "\xe7\xae\x80\xe4\xbd\x93";  // 简体
-        else if (languages[i].code == "zh-TW") langName = "\xe7\xb9\x81\xe9\xab\x94";  // 繁體
-        else if (languages[i].code == "en-US") langName = "English";
+        bool isSelected = (orderedLangs[i].code == currentLang);
+        const char* langName = orderedLangs[i].displayName.c_str();
 
         ImVec2 textSize = ImGui::CalcTextSize(langName);
         ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -2971,7 +3095,7 @@ bool LanguageSelector(const char* label, std::string& currentLang) {
         dl->AddText(pos, textColor, langName);
 
         if (clicked && !isSelected) {
-            currentLang = languages[i].code;
+            currentLang = orderedLangs[i].code;
             changed = true;
         }
 
