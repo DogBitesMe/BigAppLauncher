@@ -32,10 +32,10 @@ static int g_screenHeight = 0;
 ColorScheme GetDarkBlueScheme() {
     ColorScheme scheme;
 
-    // Primary - Blue
-    scheme.Primary = ImVec4(0.26f, 0.59f, 0.98f, 1.0f);
-    scheme.PrimaryHover = ImVec4(0.36f, 0.69f, 1.0f, 1.0f);
-    scheme.PrimaryActive = ImVec4(0.16f, 0.49f, 0.88f, 1.0f);
+    // Primary - Cyan Blue (#25BBFF = 37, 187, 255)
+    scheme.Primary = ImVec4(0.145f, 0.733f, 1.0f, 1.0f);       // #25BBFF
+    scheme.PrimaryHover = ImVec4(0.25f, 0.80f, 1.0f, 1.0f);    // lighter
+    scheme.PrimaryActive = ImVec4(0.10f, 0.65f, 0.90f, 1.0f);  // darker
 
     // Accent
     scheme.Accent = ImVec4(0.40f, 0.70f, 1.0f, 1.0f);

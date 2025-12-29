@@ -6,10 +6,10 @@ namespace Theme {
 
 // Color palette
 namespace Colors {
-    // Primary colors
-    inline ImVec4 Primary = ImVec4(0.26f, 0.59f, 0.98f, 1.0f);       // Blue
-    inline ImVec4 PrimaryHover = ImVec4(0.36f, 0.69f, 1.0f, 1.0f);
-    inline ImVec4 PrimaryActive = ImVec4(0.16f, 0.49f, 0.88f, 1.0f);
+    // Primary colors - Cyan Blue (#25BBFF)
+    inline ImVec4 Primary = ImVec4(0.145f, 0.733f, 1.0f, 1.0f);       // #25BBFF
+    inline ImVec4 PrimaryHover = ImVec4(0.25f, 0.80f, 1.0f, 1.0f);    // lighter
+    inline ImVec4 PrimaryActive = ImVec4(0.10f, 0.65f, 0.90f, 1.0f);  // darker
 
     // Background colors
     inline ImVec4 Background = ImVec4(0.06f, 0.06f, 0.09f, 1.0f);    // Dark background
